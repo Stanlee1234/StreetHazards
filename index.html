@@ -21,6 +21,108 @@
     #map {
       height: 100%;
       width: 100%;
+      margin-left: 320px;
+      width: calc(100% - 320px);
+    }
+
+    .hazards-sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 900;
+      width: 320px;
+      box-sizing: border-box;
+      padding: 24px 18px;
+      overflow-y: auto;
+      background: #f8fafc;
+      border-right: 1px solid #cbd5e1;
+      color: #172033;
+      font: 14px/1.4 system-ui, sans-serif;
+    }
+
+    .hazards-sidebar h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .hazards-sidebar p {
+      margin: 4px 0 18px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .hazard-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .hazard-item {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #ef4444;
+      border-radius: 6px;
+      padding: 12px;
+      background: #ffffff;
+      color: #172033;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    }
+
+    .hazard-item:hover,
+    .hazard-item:focus-visible {
+      border-color: #94a3b8;
+      outline: 0;
+    }
+
+    .hazard-item-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-weight: 700;
+    }
+
+    .hazard-distance {
+      flex: 0 0 auto;
+      color: #b91c1c;
+      font-size: 12px;
+    }
+
+    .hazard-details {
+      display: block;
+      margin-top: 4px;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .hazard-empty {
+      margin: 0;
+      padding: 16px 4px;
+      color: #64748b;
+    }
+
+    @media (max-width: 700px) {
+      #map {
+        margin-left: 0;
+        width: 100%;
+      }
+
+      .hazards-sidebar {
+        top: auto;
+        width: 100%;
+        max-height: 42vh;
+        padding: 14px 16px;
+        border-top: 1px solid #cbd5e1;
+        border-right: 0;
+      }
+
+      .hazards-sidebar h1 {
+        font-size: 17px;
+      }
+
+      .hazards-sidebar p {
+        margin-bottom: 10px;
+      }
     }
 
     .report-toggle {
@@ -205,6 +307,13 @@
 </head>
 <body>
 
+  <aside class="hazards-sidebar" aria-labelledby="hazards-title">
+    <h1 id="hazards-title">Closest hazards</h1>
+    <p id="hazards-status">Locating you...</p>
+    <div class="hazard-list" id="hazard-list" aria-live="polite">
+      <p class="hazard-empty">Loading hazards...</p>
+    </div>
+  </aside>
   <div id="map"></div>
   <button class="report-toggle" id="report-toggle" type="button">Report a hazard</button>
 
@@ -222,9 +331,8 @@
       <select id="hazard-type" required>
         <option value="">Select a hazard</option>
         <option value="Pothole">Pothole</option>
-        <option value="Flood">Flood</option>
+        <option value="Crash">Crash</option>
         <option value="Road block">Road block</option>
-        <option value="Broken streetlight">Broken streetlight</option>
         <option value="Other">Other</option>
       </select>
       <label for="hazard-details">Details <span>(optional)</span></label>
@@ -285,6 +393,61 @@
 
     let userMarker = null;
     let accuracyCircle = null;
+    let userLocation = null;
+    let hazards = [];
+    const hazardMarkers = new Map();
+    const hazardList = document.getElementById('hazard-list');
+    const hazardsStatus = document.getElementById('hazards-status');
+
+    function distanceInMeters(first, second) {
+      const earthRadius = 6371000;
+      const latDifference = (second.lat - first.lat) * Math.PI / 180;
+      const lngDifference = (second.lng - first.lng) * Math.PI / 180;
+      const latitude = first.lat * Math.PI / 180;
+      const secondLatitude = second.lat * Math.PI / 180;
+      const value = Math.sin(latDifference / 2) ** 2
+        + Math.cos(latitude) * Math.cos(secondLatitude) * Math.sin(lngDifference / 2) ** 2;
+      return earthRadius * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+    }
+
+    function formatDistance(meters) {
+      return meters < 1000 ? `${Math.round(meters)} m away` : `${(meters / 1000).toFixed(1)} km away`;
+    }
+
+    function renderHazards() {
+      const sortedHazards = hazards
+        .map((hazard) => ({
+          ...hazard,
+          distance: userLocation ? distanceInMeters(userLocation, hazard) : null
+        }))
+        .sort((first, second) => (first.distance ?? Infinity) - (second.distance ?? Infinity));
+
+      hazardList.replaceChildren();
+      if (!sortedHazards.length) {
+        const emptyMessage = document.createElement('p');
+        emptyMessage.className = 'hazard-empty';
+        emptyMessage.textContent = 'No hazards have been reported yet.';
+        hazardList.appendChild(emptyMessage);
+        return;
+      }
+
+      sortedHazards.forEach((hazard) => {
+        const item = document.createElement('button');
+        item.className = 'hazard-item';
+        item.type = 'button';
+        item.innerHTML = `<span class="hazard-item-header"><span></span><span class="hazard-distance"></span></span><span class="hazard-details"></span>`;
+        item.querySelector('.hazard-item-header span').textContent = hazard.type || 'Other hazard';
+        item.querySelector('.hazard-distance').textContent = hazard.distance === null
+          ? 'Distance unavailable'
+          : formatDistance(hazard.distance);
+        item.querySelector('.hazard-details').textContent = hazard.details || 'No additional details';
+        item.addEventListener('click', () => {
+          map.setView([hazard.lat, hazard.lng], 17);
+          hazardMarkers.get(hazard.id)?.openPopup();
+        });
+        hazardList.appendChild(item);
+      });
+    }
 
     map.locate({
       watch: true,
@@ -293,6 +456,9 @@
 
     map.on('locationfound', function(e) {
       const radius = e.accuracy;
+      userLocation = e.latlng;
+      hazardsStatus.textContent = `${hazards.length} reported hazard${hazards.length === 1 ? '' : 's'} nearby`;
+      renderHazards();
 
       if (!userMarker) {
         userMarker = L.marker(e.latlng, { icon: gpsIcon }).addTo(map);
@@ -314,6 +480,8 @@
 
     map.on('locationerror', function(e) {
       console.warn(e.message);
+      hazardsStatus.textContent = 'Enable location to sort by distance';
+      renderHazards();
     });
 
     const reportToggle = document.getElementById('report-toggle');
@@ -404,21 +572,26 @@
     });
 
     onSnapshot(hazardsRef, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const data = change.doc.data();
-
-          L.circleMarker([data.lat, data.lng], {
-            radius: 8,
-            fillColor: "#ef4444",
-            color: "#991b1b",
-            weight: 2,
-            fillOpacity: 0.8
-          })
+      hazardMarkers.forEach((marker) => map.removeLayer(marker));
+      hazardMarkers.clear();
+      hazards = snapshot.docs.map((hazardDoc) => {
+        const data = hazardDoc.data();
+        const marker = L.circleMarker([data.lat, data.lng], {
+          radius: 8,
+          fillColor: "#ef4444",
+          color: "#991b1b",
+          weight: 2,
+          fillOpacity: 0.8
+        })
           .addTo(map)
           .bindPopup(`<b>Hazard:</b> ${data.type}${data.details ? `<br>${data.details}` : ''}`);
-        }
+        hazardMarkers.set(hazardDoc.id, marker);
+        return { id: hazardDoc.id, ...data };
       });
+      hazardsStatus.textContent = userLocation
+        ? `${hazards.length} reported hazard${hazards.length === 1 ? '' : 's'} nearby`
+        : 'Locating you...';
+      renderHazards();
     });
   </script>
 </body>
