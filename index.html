@@ -3,57 +3,262 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>StreetHazards</title>
+  <title>HazardHunt — Can You Spot the Hazards?</title>
+
+  <link rel="stylesheet" href="css/game.css" />
+
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">🚨</div>
+      <div class="brand-text">
+        <h1>HAZARDHUNT</h1>
+        <span>Public Safety Awareness</span>
+      </div>
+    </div>
+    <div class="system-status">
+      <span class="status-dot"></span>
+      SYSTEM ONLINE
+    </div>
+  </header>
+
+  <!-- ============ START SCREEN ============ -->
+  <section class="view active" id="start-view">
+    <div class="eyebrow">Mission 01 · Urban Awareness</div>
+    <h2 class="start-title">HAZARDHUNT</h2>
+    <p class="start-subtitle">Can you spot what others miss?</p>
+    <p class="start-copy">
+      Explore the city scene, identify hidden safety hazards, and learn why
+      each one matters. You have three minutes — trust your eyes.
+    </p>
+    <button class="btn" id="start-hunt-btn" type="button"><span class="button-icon" aria-hidden="true">▶</span> Start Hunt</button>
+
+    <div class="how-it-works" id="how-it-works">
+      <div class="how-card">
+        <div class="num">1</div>
+        <h3>Scan the Scene</h3>
+        <p>Look carefully through the illustrated environment.</p>
+      </div>
+      <div class="how-card">
+        <div class="num">2</div>
+        <h3>Spot a Hazard</h3>
+        <p>Click something that appears unsafe.</p>
+      </div>
+      <div class="how-card">
+        <div class="num">3</div>
+        <h3>Learn Why</h3>
+        <p>Read the safety explanation for each find.</p>
+      </div>
+      <div class="how-card">
+        <div class="num">4</div>
+        <h3>Find Them All</h3>
+        <p>Discover every hazard before time runs out.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GAME SCREEN ============ -->
+  <section class="view" id="game-view">
+    <!-- HUD -->
+    <div class="hud" role="status" aria-label="Game statistics">
+      <div class="stat">
+        <div class="stat-label">Time</div>
+        <div class="stat-value" id="hud-timer">03:00</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Score</div>
+        <div class="stat-value" id="hud-score">0000</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Hazards</div>
+        <div class="stat-value" id="hud-found">0 / 19</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Total</div>
+        <div class="stat-value" id="hud-total">15</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Accuracy</div>
+        <div class="stat-value" id="hud-accuracy">—</div>
+      </div>
+    </div>
+
+    <!-- SCENE -->
+    <div class="scene-frame">
+      <div class="scene-toolbar">
+        <div class="scene-name">🏙️ Downtown District <span>/ Observation Area</span></div>
+        <div class="scene-hint">Click anywhere on the scene you think is unsafe</div>
+      </div>
+
+      <div class="artwork-wrap">
+        <div class="artwork" id="artwork">
+          <img src="art/unsafe-city.png" alt="Illustrated city street with hidden safety hazards" draggable="false" />
+          <!-- Hazard markers are injected here by js/game.js -->
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS + ACTIONS -->
+    <div class="progress-row">
+      <div class="progress-block">
+        <div class="progress-labels">
+          <span>Investigation Progress</span>
+          <span class="progress-count" id="progress-count">0 / 19</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-status" id="progress-status"></div>
+      </div>
+      <div class="progress-actions">
+        <button class="btn ghost small" id="how-btn" type="button"><span class="button-icon" aria-hidden="true">?</span> How It Works</button>
+        <button class="btn small" id="restart-btn" type="button"><span class="button-icon" aria-hidden="true">↻</span> Restart Hunt</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS SCREEN ============ -->
+  <section class="view" id="results-view">
+    <div class="results-badge" id="results-badge" aria-hidden="true">🏆</div>
+    <h2 class="results-title" id="results-title">HAZARD HUNT COMPLETE</h2>
+    <p class="results-sub" id="results-sub">Every hazard identified — the city is safer with you on watch.</p>
+
+    <div class="results-grid">
+      <div class="result-tile">
+        <div class="value" id="results-found">0 / 19</div>
+        <div class="label">Hazards Found</div>
+      </div>
+      <div class="result-tile accent">
+        <div class="value" id="results-score">0000</div>
+        <div class="label">Final Score</div>
+      </div>
+      <div class="result-tile">
+        <div class="value" id="results-accuracy">0%</div>
+        <div class="label">Accuracy</div>
+      </div>
+    </div>
+
+    <div class="safety-message">
+      <strong>Safety Awareness</strong>
+      Noticing hazards early can help prevent accidents. A blocked exit, a
+      broken sign, or a damaged walkway is easy to overlook — but pointing it
+      out to the right people keeps streets safe for everyone. Stay observant
+      out there.
+    </div>
+
+    <div class="results-actions">
+      <button class="btn" id="play-again-btn" type="button"><span class="button-icon" aria-hidden="true">↻</span> Play Again</button>
+      <button class="btn ghost" id="results-map-btn" type="button"><span class="button-icon" aria-hidden="true">⌖</span> Community Map</button>
+    </div>
+  </section>
+
+  <!-- ============ MAP VIEW (community reports) ============ -->
+  <section class="view" id="map-view">
+    <div class="map-card">
+      <div class="map-toolbar">
+        <div class="scene-name"><span class="section-icon" aria-hidden="true">⌖</span> Community Hazard Map <span>/ live reports</span></div>
+        <div class="map-actions">
+          <button class="map-tool" id="locate-me" type="button" title="Center on my location" aria-label="Center on my location">◎</button>
+          <button class="report-toggle" id="report-toggle" type="button"><span aria-hidden="true">+</span> Report a hazard</button>
+        </div>
+      </div>
+      <div class="map-filters" aria-label="Map filters">
+        <label for="hazard-filter">Show</label>
+        <select id="hazard-filter">
+          <option value="all">All hazards</option>
+          <option value="Pothole">Potholes</option>
+          <option value="Flood">Floods</option>
+          <option value="Road block">Road blocks</option>
+          <option value="Broken streetlight">Broken streetlights</option>
+          <option value="Other">Other</option>
+        </select>
+        <span class="live-indicator"><span class="status-dot"></span> Live feed</span>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <div class="community-grid">
+      <section class="reward-panel" aria-labelledby="reward-title">
+        <div class="panel-kicker"><span aria-hidden="true">✦</span> Sentinel rewards</div>
+        <div class="panel-heading-row">
+          <div>
+            <h2 id="reward-title">Make the map safer</h2>
+            <p id="reward-copy">Every verified-looking report builds your local streak.</p>
+          </div>
+          <div class="reward-emblem" aria-hidden="true">★</div>
+        </div>
+        <div class="reward-score"><strong id="report-points">0</strong><span>points</span></div>
+        <div class="reward-track"><span id="reward-progress"></span></div>
+        <div class="reward-next"><span id="reward-badge">First Responder</span><span id="reward-next-text">1 report to unlock</span></div>
+        <div class="badge-row" id="badge-row" aria-label="Unlocked rewards">
+          <span class="badge locked" data-badge="first"><span aria-hidden="true">♢</span> First report</span>
+          <span class="badge locked" data-badge="watch"><span aria-hidden="true">◉</span> Street watcher</span>
+          <span class="badge locked" data-badge="guardian"><span aria-hidden="true">✦</span> City guardian</span>
+        </div>
+      </section>
+
+      <section class="leaderboard-panel" aria-labelledby="leaderboard-title">
+        <div class="panel-heading-row">
+          <div>
+            <div class="panel-kicker"><span aria-hidden="true">▤</span> Community impact</div>
+            <h2 id="leaderboard-title">Report leaderboard</h2>
+          </div>
+          <span class="leaderboard-count" id="leaderboard-count">0 reports</span>
+        </div>
+        <div class="leaderboard-list" id="leaderboard-list">
+          <div class="leaderboard-empty">Be the first sentinel on the board.</div>
+        </div>
+      </section>
+    </div>
+
+    <section class="report-panel" id="report-panel" aria-labelledby="report-title">
+      <div class="report-header">
+        <div>
+          <h2 id="report-title">Report a hazard</h2>
+          <p>Click the map to choose a location.</p>
+        </div>
+        <button class="report-close" id="report-close" type="button" aria-label="Close report form">&times;</button>
+      </div>
+      <p class="report-location" id="report-location">No location selected</p>
+      <form id="report-form">
+        <label for="hazard-type">Hazard type</label>
+        <select id="hazard-type" required>
+          <option value="">Select a hazard</option>
+          <option value="Pothole">Pothole</option>
+          <option value="Flood">Flood</option>
+          <option value="Road block">Road block</option>
+          <option value="Broken streetlight">Broken streetlight</option>
+          <option value="Other">Other</option>
+        </select>
+        <label for="hazard-details">Details <span>(optional)</span></label>
+        <textarea id="hazard-details" maxlength="300" placeholder="Add useful details about this hazard"></textarea>
+        <div class="report-actions">
+          <button class="report-cancel" id="report-cancel" type="button">Cancel</button>
+          <button class="report-submit" id="report-submit" type="submit"><span aria-hidden="true">✓</span> Submit report</button>
+        </div>
+        <p class="report-status" id="report-status" role="status"></p>
+      </form>
+    </section>
+
+    <div style="text-align:center; margin-top: 22px;">
+      <button class="btn ghost" id="map-back-btn" type="button"><span class="button-icon" aria-hidden="true">←</span> Back to the Hunt</button>
+    </div>
+  </section>
+
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-    #map {
-      height: 100%;
-      width: 100%;
-    }
-  </style>
-</head>
-<body>
-
-  <div id="map"></div>
-
-  <script>
-  const map = L.map('map').setView([37.7749, -122.4194], 13);
-
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-  }).addTo(map);
-
-  map.locate({ setView: true, maxZoom: 16 });
-
-  map.on('locationfound', function(e) {
-    L.marker(e.latlng)
-      .addTo(map)
-      .bindPopup("You are here!")
-      .openPopup();
-
-    L.circle(e.latlng, { radius: e.accuracy }).addTo(map);
-  });
-
-  map.on('locationerror', function(e) {
-    alert("Could not access your location: " + e.message);
-  });
-</script>
+  <script src="js/game.js"></script>
 </body>
 </html>
