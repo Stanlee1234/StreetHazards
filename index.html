@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>StreetHazards</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 
   <link
     rel="stylesheet"
@@ -23,10 +24,24 @@
     <div class="hazard-list" id="hazard-list" aria-live="polite">
       <p class="hazard-empty">Loading hazards...</p>
     </div>
+    <button class="report-toggle" id="report-toggle" type="button">Report a hazard</button>
   </aside>
 
   <div id="map"></div>
-  <button class="report-toggle" id="report-toggle" type="button">Report a hazard</button>
+  <form class="place-search" id="place-search" role="search">
+    <label class="sr-only" for="place-search-input">Search for a restaurant or landmark</label>
+    <input id="place-search-input" type="search" placeholder="Search restaurants and landmarks" autocomplete="off" />
+    <button type="submit" aria-label="Search">
+      <span class="search-icon" aria-hidden="true"></span>
+      <span class="sr-only">Search</span>
+    </button>
+    <div class="place-search-results" id="place-search-results" role="listbox" aria-live="polite"></div>
+  </form>
+  <div class="auth-controls">
+    <span class="sr-only" id="auth-status">Sign in to report or vote</span>
+    <button id="auth-button" type="button">Sign in</button>
+  </div>
+  <a class="about-link" href="about.html">About</a>
 
   <section class="report-panel" id="report-panel" aria-labelledby="report-title">
     <div class="report-header">
@@ -37,6 +52,11 @@
       <button class="report-close" id="report-close" type="button" aria-label="Close report form">&times;</button>
     </div>
     <p class="report-location" id="report-location">No location selected</p>
+    <div class="report-auth-notice" id="report-auth-notice" role="status">
+      <strong>Sign in required</strong>
+      <span>Sign in with Google before submitting a hazard report.</span>
+      <button id="report-auth-button" type="button">Sign in with Google</button>
+    </div>
     <form id="report-form">
       <label for="hazard-type">Hazard type</label>
       <select id="hazard-type" required>
