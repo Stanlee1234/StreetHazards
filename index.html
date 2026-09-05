@@ -56,7 +56,6 @@
       z-index: 1;
     }
 
-    /* Pulse animation definition */
     @keyframes pulse-ring {
       0% {
         width: 14px;
@@ -87,29 +86,58 @@
   <script>
     const map = L.map('map').setView([0, 0], 2);
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+// Define custom pulsing icon
+const gpsIcon = L.divIcon({
+  className: 'gps-marker',
+  html: '<div class="gps-pulse"></div><div class="gps-dot"></div>',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8]
+});
+
+// Variables to retain references across updates
+let userMarker = null;
+let accuracyCircle = null;
+let initialCenter = false;
+
+// 1. Enable continuous tracking and high-accuracy GPS
+map.locate({
+  watch: true,             // Continuously monitor location changes
+  enableHighAccuracy: true // Request hardware GPS instead of rough IP/Wi-Fi lookup
+});
+
+// 2. Runs continuously whenever the GPS position changes
+map.on('locationfound', function(e) {
+  const radius = e.accuracy;
+
+  // First fix: center the camera and create the marker
+  if (!userMarker) {
+    userMarker = L.marker(e.latlng, { icon: gpsIcon }).addTo(map);
+    accuracyCircle = L.circle(e.latlng, {
+      radius: radius,
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.15,
+      weight: 1
     }).addTo(map);
 
-    const gpsIcon = L.divIcon({
-      className: 'gps-marker',
-      html: '<div class="gps-pulse"></div><div class="gps-dot"></div>',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
-    });
+    map.setView(e.latlng, 16);
+    initialCenter = true;
+  } else {
+    // Subsequent updates: move the existing marker smoothly
+    userMarker.setLatLng(e.latlng);
+    accuracyCircle.setLatLng(e.latlng);
+    accuracyCircle.setRadius(radius);
+  }
+});
 
-    // Request location
-    map.locate({ setView: true, maxZoom: 16 });
-
-    map.on('locationfound', function(e) {
-      // Place the pulsing blue dot
-      L.marker(e.latlng, { icon: gpsIcon }).addTo(map);
-    });
-
-    map.on('locationerror', function(e) {
-      alert("Could not access location: " + e.message);
-    });
+map.on('locationerror', function(e) {
+  console.warn("Location tracking error:", e.message);
+});
   </script>
 </body>
 </html>
