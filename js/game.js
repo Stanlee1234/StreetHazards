@@ -253,7 +253,9 @@ const el = {
     how: document.getElementById('how-btn'),
     playAgain: document.getElementById('play-again-btn'),
     resultsMap: document.getElementById('results-map-btn'),
-    mapBack: document.getElementById('map-back-btn')
+    mapPlay: document.getElementById('map-play-btn'),
+    startMap: document.getElementById('start-map-btn'),
+    gameExit: document.getElementById('game-exit-btn')
   }
 };
 
@@ -863,16 +865,37 @@ function wireEvents() {
     showView('map');
     mapModule.activate();
   });
-  el.buttons.mapBack.addEventListener('click', () => {
+
+  // Map-first home: "Play HazardHunt" CTA opens the game intro.
+  // If a hunt is already underway, offer to resume it instead of resetting.
+  el.buttons.mapPlay.addEventListener('click', () => {
     playSound('click');
-    if (state.gameOver) {
-      // The hunt already ended — return to the results instead of resuming.
-      showView('results');
-      return;
+    closeFeedbackCard();
+    if (!state.gameOver && state.timeLeft < GAME_DURATION_SECONDS) {
+      showingHowFromGame = true; // reuse the resume path
+      startButton.textContent = '▶ Resume Hunt';
+    } else {
+      showingHowFromGame = false;
+      startButton.textContent = '▶ Start Hunt';
     }
-    state.running = true; // resume the paused hunt
-    startTimer();
-    showView('game');
+    showView('start');
+  });
+
+  // "Back to Map" from the game intro — nothing to pause, just go home.
+  el.buttons.startMap.addEventListener('click', () => {
+    playSound('click');
+    showingHowFromGame = false;
+    startButton.textContent = '▶ Start Hunt';
+    showView('map');
+    mapModule.activate();
+  });  // "Exit to Map" from a live hunt — pause, keep score, resume on return.
+  el.buttons.gameExit.addEventListener('click', () => {
+    playSound('click');
+    state.running = false;
+    clearInterval(state.timerInterval);
+    closeFeedbackCard();
+    showView('map');
+    mapModule.activate();
   });
 
   el.artwork.addEventListener('click', (event) => {
@@ -891,6 +914,8 @@ function init() {
   wireEvents();
   renderHud();
   buildMarkers();
+  // Map-first home: the community map is the landing view, so boot it now.
+  mapModule.activate();
 }
 
 init();
