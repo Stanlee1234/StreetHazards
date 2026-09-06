@@ -9,6 +9,11 @@ StreetHazards is a public-safety web app with two parts sharing one page:
 
 Both live in the same `index.html` and are served from a single Firebase Hosting site at **https://streethazards.web.app/** (mirrored at https://streethazards.firebaseapp.com/).
 
+## Docs
+
+- `ARCHITECTURE.md` — deep dive: runtime topology, Firestore data model, a line-numbered code map of `js/game.js`, end-to-end flows, and the security model.
+- `INTERVIEW_PREP.md` — judge Q&A plus DevTools live-coding drills (line-by-line change exercises).
+
 ## Feature split
 
 The repo now contains two separate experiences that coexist on the same page:
@@ -18,12 +23,13 @@ The repo now contains two separate experiences that coexist on the same page:
 - Reports hazards on an interactive **Leaflet** map using OpenStreetMap tiles.
 - Stores reports in **Firestore** (`/hazards` collection) and reads them in real time with `onSnapshot`, so every connected client sees new and updated reports instantly.
 - Sorts hazards by distance when browser geolocation is available, using a haversine calculation and a live GPS watch.
-- Lets signed-in users **report hazards**: choose a preset type (Pothole, Crash, Road block, Other) or enter a custom hazard, optionally add details, and click the map to choose a location.
-- Lets signed-in users **vote "not there anymore"**. Each vote increments `notThereVotes` in a Firestore transaction. A hazard is marked `resolved` and removed from the UI when it reaches the required threshold (`votesRequired + activeVotes`), so more active agreement means more votes are needed to remove it.
+- Lets **anyone — guest or signed-in — report hazards**: choose a preset type (Pothole, Crash, Road block, Other) or enter a custom hazard, optionally add details, and click the map to choose a location.
+- Lets **anyone vote "not there anymore"** (guests get a persistent device ID). Each vote increments `notThereVotes` in a Firestore transaction. A hazard is marked `resolved` and removed from the UI when it reaches the required threshold (`3 + activeVotes`), so more active agreement means more votes are needed to remove it.
 - Marker size grows with active agreement, capped at a maximum radius.
 - Each marker popup links to **Google Maps** for the hazard location.
 - Includes a **Nominatim place search** bar (OpenStreetMap, no API key) to jump to restaurants/landmarks.
-- Has a **collapsible closest-hazards sidebar**, an auth-gated report form, and a mobile-friendly layout.
+- Has a **collapsible closest-hazards sidebar** and a mobile-friendly layout.
+- Has a **one-click demo seeder** (🧪 Seed demo data): every click adds ~50 demo hazards clustered near the venue/Sammamish and scattered across Washington, so a demo never starts on an empty map.
 
 Backend: **Firebase** (Hosting + Firestore + Auth/Google). All logic runs in the browser via `js/game.js`; no custom server.
 
@@ -47,7 +53,7 @@ Backend: **Firebase** (Hosting + Firestore + Auth/Google). All logic runs in the
 
 2. The **HazardHunt game** works fully offline from that static server — open the page and click Start Hunt.
 
-3. The **community map** loads Leaflet and the Firebase SDKs from CDN, so no install is required to view it. To report hazards or vote, you need to be signed in with Google and the Firebase project must be reachable. Geolocation, place search (Nominatim), and audio also behave best when the page is served over HTTPS or on localhost.
+3. The **community map** loads Leaflet and the Firebase SDKs from CDN, so no install is required. **Guests can report and vote immediately** (the app assigns a device ID); sign in with Google to keep points and reports across devices. The Firebase project must be reachable. Geolocation, place search (Nominatim), and audio also behave best when the page is served over HTTPS or on localhost.
 
 ## Firebase project and config
 
@@ -57,7 +63,7 @@ Relevant files:
 
 - `firebase.json` — Hosting config (site name `streethazards`, public root `.`) plus Firestore config pointing at `firestore.rules` and `firestore.indexes.json`.
 - `.firebaserc` — sets the default Firebase project to `streethazards-2a` for CLI commands.
-- `firestore.rules` — Firestore security rules. Currently scoped to `match /hazards/{hazardId}` with `allow read: if true` and `allow create, update: if request.auth != null && request.time < timestamp.date(2026, 10, 5)`.
+- `firestore.rules` — Firestore security rules. `match /hazards/{hazardId}`: `allow read: if true`, `allow create, update: if request.time < timestamp.date(2026, 10, 5)` (guests may report/vote until that date; **client deletes are not allowed**). `match /users/{userId}`: each signed-in user may read/write only their own doc. **Note:** rules only take effect once deployed (`firebase deploy --only firestore`) — the live DB currently still runs the original wide-open starter rules.
 - `firestore.indexes.json` — Firestore index config (currently empty; add indexes here if queries need them).
 - `js/game.js` — contains the Firebase app config (apiKey, authDomain, projectId, etc.) used to initialize Firebase, Auth, and Firestore in the browser.
 
@@ -112,7 +118,9 @@ StreetHazards/
 ├── .firebaserc                # default Firebase project (streethazards-2a)
 ├── firestore.rules            # Firestore security rules
 ├── firestore.indexes.json     # Firestore index config
-├── firebase.json              # (also under root, hosting/firestore config)
+├── seed.html                  # dev-only bulk seeder (superseded by the in-app seed button)
+├── INTERVIEW_PREP.md          # interview study guide (Q&A + DevTools live-coding drills)
+├── ARCHITECTURE.md            # deep-dive: diagrams, data model, code map
 └── .gitignore                 # ignores logs, Firebase cache, node_modules, env files, etc.
 ```
 
