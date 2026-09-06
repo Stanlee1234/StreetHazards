@@ -4,6 +4,9 @@ Study guide for talking about the project with judges, teammates, or in a
 technical interview. Covers the architecture, the features, and the kind of
 on-the-spot coding questions you might get.
 
+Companion docs: `README.md` (start here — what the project is, how to run/deploy it)
+and `ARCHITECTURE.md` (deep dive — diagrams, data flows, and a code map with line numbers).
+
 ---
 
 ## 1. The 30-second pitch
@@ -29,8 +32,11 @@ StreetHazards/
 ├── seed.html         # Dev-only bulk-seed page (in-app seed button is the main path now)
 ├── art/unsafe-city.png   # The illustrated game board
 ├── sounds/*.mp3          # hazard-found, warning, complete, click
-├── firestore.rules       # Security rules (guests can create hazards; users own their /users doc)
-└── firebase.json         # Firebase hosting + Firestore config
+├── firestore.rules       # Security rules (guests can create hazards; no client delete;
+│                         #   each user owns their /users doc)
+├── firebase.json         # Firebase hosting + Firestore config
+├── ARCHITECTURE.md       # Deep-dive: diagrams, data flows, code map
+└── README.md             # Project overview + deploy steps
 ```
 
 **Key architectural decisions to defend:**
@@ -51,12 +57,13 @@ StreetHazards/
 - Leaflet + OpenStreetMap tiles. Default view: Washington state (47.45, -121.9, zoom 8).
 - `map.locate({ watch: true })` on load → a pulsing GPS marker + accuracy circle; also auto-centers the first time. Press **L** or the **◎** button to re-center anytime.
 - Markers come from Firestore docs: `{type, details, lat, lng, activeVotes, notThereVotes, resolved, reporterId, createdAt}`.
-- Marker **size scales with activeVotes** (agreement), capped at 24. Popup has details + "Open in Google Maps".
+- Marker **size scales with activeVotes** (agreement), capped at a max radius. Popup has details + "Open in Google Maps".
+- A live **onSnapshot** drives the whole UI: markers, the nearby-hazards sidebar, and the leaderboard all re-render from one callback.
 
 ### Reporting
 - "Report a hazard" opens a panel; clicking the map picks the location.
 - Type dropdown + optional details; "Other" reveals a free-text custom type.
-- **Guests can report** (rules allow unauthenticated creates). Reports carry `reporterId` = Firebase UID if signed in, else a persistent device ID from localStorage.
+- **Guests can report** (rules allow unauthenticated creates until 2026-10-05). Reports carry `reporterId` = Firebase UID if signed in, else a persistent device ID from localStorage.
 
 ### Voting ("is it gone?")
 - Every hazard's sidebar entry has **Vote: gone (x/y)**.
@@ -76,7 +83,7 @@ StreetHazards/
 - Leaderboard aggregates reports per identity.
 
 ### The game (HazardHunt)
-- 15 hazards positioned by **percentage coordinates** on `art/unsafe-city.png`, so markers stay glued to the art at any screen size.
+- **19 hazards** positioned by **percentage coordinates** on `art/unsafe-city.png`, so markers stay glued to the art at any screen size.
 - 3-minute countdown; found hazards can't be scored twice; wrong clicks only note "No hazard detected."
 - Sound effects guarded by try/catch so blocked autoplay never crashes.
 - Exiting to the map **pauses** the hunt (timer freezes); the CTA shows "▶ Resume Hunt" and resumes at the exact second.
@@ -104,42 +111,195 @@ A: The game is a self-contained timed interaction on static artwork (client-only
 A: Each hazard has a `found` flag in the single game state object; the click handler checks `if (h.found) return` before scoring, and found markers are re-rendered to a disabled checkmark state.
 
 **Q: Security — anyone can write to your DB?**
-A: Rules are deliberately open for *creating hazards* (so the hackathon demo works for guests) but time-bound (valid until Oct 5, 2026) and rate-limited per device. Users can only read/write their **own** `/users/{uid}` doc. We trade strict auth for demo usability and document the tradeoff in `firestore.rules`.
+A: Rules are deliberately open for *creating/updating hazards* (so guests can report and vote for the hackathon demo) but time-bound (valid until Oct 5, 2026) and **client deletes are not allowed** in the repo rules. Users can only read/write their **own** `/users/{uid}` doc. Honest caveat: there is no per-device rate limit in the rules yet — the app only uses a device ID for point attribution. We trade strict auth for demo usability and document the tradeoff in `firestore.rules`.
 
 **Q: What would you add next?**
 A: (Pick honestly — e.g.) Per-account portfolios are done; next I'd add: hazard photos, admin moderation for resolved-vote abuse, a "my reports" edit/delete, and unit tests. A Firebase Functions moderation queue would close the guest-write loophole in production.
 
 ---
 
-## 5. On-the-spot coding questions (practice these)
+## 5. On-the-spot coding questions (drill these in DevTools)
 
-These are the shape of "change some code live" tasks. Know where each lives.
+A judge will usually say "open the page, open DevTools, and change X." These seven
+drills cover the realistic ones. Each has the exact file:line, the edit, and a
+verification loop. Do them against a local server so edits show up instantly.
 
-1. **"Make the hazard filter also affect the nearby list."**
-   → `js/game.js`, `renderNearby()` — it reads the module-private `hazards` array. Read `filter` value (`nodes.filter.value`) and filter `sorted` the same way `applyFilter` does for markers.
+### DevTools survival kit (know these cold)
 
-2. **"Add a new hazard type to the game."**
-   → The `HAZARDS` array at the top of `js/game.js` (each entry: `{id, name, problem, why, severity, points, x, y}`). Add one, position `x`/`y` as percentages of the artwork, update the total count constant (`TOTAL_HAZARDS` or wherever it's derived) if it's hardcoded.
+1. **Serve the repo and hard-reload.** Open the app (any static server — `python -m http.server`, the Firebase preview, etc.) and reload with **Ctrl+Shift+R** (Cmd+Shift+R on Mac) so you're always running the current files.
+2. **Open DevTools:** **F12** or **Ctrl+Shift+I** (Cmd+Opt+I on Mac), or **right-click → Inspect** on the element you care about.
+3. **Inspect any UI piece:** right-click a vote button, a marker, or the map → Inspect. The Elements panel shows the live DOM. Note the `id`s you'll search for in the source: `hazard-list`, `nearby-count`, `hazard-filter`, `seed-demo-btn`, `hazard-type`, `report-status`. You can also hit **Ctrl+F** inside the Elements panel to find a node by id.
+4. **Find code fast:** DevTools → **Sources** tab → pick `js/game.js` → **Ctrl+F** to jump to a function. For a repo-wide search use **Ctrl+Shift+F**. There is **no build step**: the file in Sources is byte-for-byte what runs, and the line numbers match your editor.
+5. **Console reality check:** top-level game functions are callable from the console — `showView('game')`, `resetGame()`, and `state` / `HAZARDS` are readable. But the **map module is an IIFE** (`const mapModule = (() => { … })()`), so its internals (`renderNearby`, `votesRequiredFor`, `applyFilter`, …) are **private and NOT callable from the console**. You test map changes through the UI after a reload.
+6. **Network tab** (filter on `firestore`): you'll see the real-time writes when you report or vote — the fastest proof that a change took effect.
+7. **The edit → verify loop:** change the line → save → hard-reload → exercise the UI → check the Console has no red errors.
+8. **Undo anything you broke:** `git checkout -- js/game.js` restores the committed version (only run it if you don't mind losing your edits).
 
-3. **"Change the vote threshold from 3+activeVotes to something else."**
-   → `votesRequiredFor(h)` in the map module — it's the single place computing the threshold; change the formula and both the sidebar and resolution logic follow.
+### Drill 1 — "Make the hazard filter also affect the nearby list."
 
-4. **"Reset the game completely when Play Again is hit."**
-   → `resetGame()` — resets the single `state` object (score, timer, found set, wrong clicks) and re-renders HUD. Don't create a second state object; that's the trap.
+*What they're checking:* you know filtering happens in one place for markers and that the sidebar renders separately from the module-private `hazards` array.
 
-5. **"Make the map default to the user's city."**
-   → `ensureMap()`: `map = L.map('map').setView([47.45, -121.9], 8)` — change the initial coordinates, or call `map.locate({ setView: true })` earlier.
+1. Look at the two functions: `applyFilter()` at **`js/game.js` line 723** only toggles map *markers*. `renderNearby()` at **line 1203** rebuilds the sidebar and ignores the dropdown.
+2. Edit `renderNearby()`. Replace:
 
-6. **"Prevent a guest from voting twice by refreshing."**
-   → Already handled: `votedHazards` Set + `localStorage` keyed by identity (`votedStorageKey()`). Point at it; add a test by clearing localStorage.
+   ```js
+   const sorted = hazards
+     .map((h) => ({ ...h, distance: userLocation ? distanceInMeters(userLocation, h) : null }))
+   ```
 
-7. **"Show a toast when a report is submitted."**
-   → `submitReport()` success path — after "Report submitted. Thank you." status text, add a transient banner. There's already a `seed-status` element pattern to imitate.
+   with:
+
+   ```js
+   const filter = nodes.filter.value; // the SAME dropdown applyFilter reads
+   const sorted = hazards
+     .filter((h) => filter === 'all' || (h.type || '') === filter)
+     .map((h) => ({ ...h, distance: userLocation ? distanceInMeters(userLocation, h) : null }))
+   ```
+
+3. (Optional polish) update the count line to use `sorted.length` instead of `hazards.length` so "X hazards" reflects the filter too.
+4. Save → hard-reload → pick **Potholes** in the dropdown → the Nearby panel now shows only pothole cards.
+5. **Trap to mention:** the dropdown *labels* are plural ("Potholes") but the *option values* are singular (`value="Pothole"`, `index.html` line 223) — match on the value, which is also what `data.type` stores.
+
+### Drill 2 — "Add a new hazard to the game (or remove one)."
+
+*What they're checking:* you know where hazards are defined and that the total count is derived, not hardcoded.
+
+1. Open the `HAZARDS` array — **`js/game.js` line 14**, ends at **line 205**. Each entry is:
+   `{ id, name, x, y, severity: 'low'|'medium'|'high', points, problem, why }`
+   where `x`/`y` are **percentages (0–100)** of the artwork.
+2. Add one entry anywhere before the closing `];`:
+
+   ```js
+   {
+     id: 'exposed-cable',
+     name: 'Exposed Cable on the Walkway',
+     x: 64,
+     y: 58,
+     severity: 'medium',
+     points: 100,
+     problem: 'A cable lies loose right across the walking path.',
+     why: 'Someone can trip or snag on it. Cables belong secured and out of the path of travel.'
+   },
+   ```
+
+3. Pick `x`/`y` that land on a real spot: open `art/unsafe-city.png` beside your editor and estimate the percentage position.
+4. **No total to bump:** `state.totalHazards = HAZARDS.length` (**line 215**). Deleting an entry also just works.
+5. Verify: save → reload → in the console type `state.totalHazards` (should now be 20), then `showView('game'); resetGame();` and check the HUD shows `0 / 20`. Click your new marker — points and feedback card appear.
+6. **Why percentages?** `buildMarkers()` (**line 420**) sets `marker.style.left = hazard.x + '%'` / `top = ...` inside the artwork wrapper, so markers stay glued to the art as it scales. Duplicate `id`s would break clicks (`HAZARDS.find()` returns the first match) — keep ids unique.
+
+### Drill 3 — "Change the vote threshold (e.g. from 3+agreements to 5+)."
+
+*What they're checking:* the threshold is computed in exactly one place.
+
+1. Open `votesRequiredFor(h)` at **`js/game.js` line 732**: `return VOTES_REQUIRED_BASE + (hazard.activeVotes || 0);`
+2. The base constant is `VOTES_REQUIRED_BASE = 3` at **line 612**. Change it to 5:
+
+   ```js
+   const VOTES_REQUIRED_BASE = 5;
+   ```
+
+3. Save → reload. Both consumers use the same function, so nothing else to edit: the sidebar denominator `renderNearby()` (line 1203) and the resolve decision inside the voting transaction (`voteHazardGone`, ~line 1193 — `resolved: next >= votesRequiredFor(data)`).
+4. Verify in the UI: a hazard with 2 active agreements now shows **"Vote: gone (x/7)"** instead of "(x/5)".
+5. **Fast end-to-end test tip:** temporarily set `VOTES_REQUIRED_BASE = 0`. A hazard with 1 active agreement then needs only 1 "gone" vote to resolve (threshold 1) — you can watch a marker disappear for everyone. Restore to 3 afterward.
+
+### Drill 4 — "Make Play Again reset the game completely."
+
+*What they're checking:* there is one `state` object and Play Again must fully reset it — the trap is creating a second state object or half-resetting.
+
+1. Find the Play Again handler in `wireEvents()` (~**line 1443**). It already does the right thing:
+
+   ```js
+   el.buttons.playAgain.addEventListener('click', () => {
+     playSound('click');
+     el.progressStatus.textContent = '';
+     el.progressStatus.classList.remove('secured');
+     showView('game');
+     resetGame();
+   });
+   ```
+
+2. `resetGame()` at **line 538** zeroes the single `state` object (`score`, `timeLeft`, `foundIds.clear()`, `wrongClicks`, flags), then calls `buildMarkers()` + `renderHud()` + `startTimer()`.
+3. Verify from the console:
+   ```js
+   showView('game'); resetGame();
+   state.score;            // 0
+   state.timeLeft;         // 180
+   state.foundIds.size;    // 0
+   ```
+4. **Trap:** never create a second state object. Everything (HUD, progress bar, results) reads `state`, so a duplicate is how screens drift out of sync. If a judge asks "why did the timer keep running?" — `startTimer()` first does `clearInterval(state.timerInterval)`, so double-starting can't stack intervals.
+
+### Drill 5 — "Make the map open on [my city] instead of the whole state / auto-center."
+
+*What they're checking:* you know where the map is created and how locate is wired.
+
+1. `ensureMap()` at **`js/game.js` line 929** creates the map:
+
+   ```js
+   map = L.map('map').setView([47.45, -121.9], 8);
+   ```
+
+2. Option A — fixed default: change the coordinates (e.g. Seattle: `[47.6062, -122.3321]`, zoom 12).
+3. Option B — auto-center on the user: the file already calls `map.locate({ watch: true, enableHighAccuracy: true })` at the end of `ensureMap()` (~line 967), and the `locationfound` handler re-centers on the **first** fix. So a fixed default + locate-on-load is the sensible combo — say that explicitly.
+4. Verify: reload → the map opens on the chosen center; grant location (or press **L** / the ◎ button) and it jumps to you.
+5. **Sandbox note:** Google's network geolocation returns 403 in restricted previews, so location never fires there — the map still works. Don't be surprised; real browsers get GPS.
+
+### Drill 6 — "Stop a user voting twice (even after a refresh)."
+
+*What they're checking:* they want you to discover this is already handled — and to be honest about its limits.
+
+1. Point at the mechanism: `votedStorageKey()` (**line 749**) returns `streetHazards:voted:<uid-or-guestId>`; `loadVotedHazards()` (**line 756**) hydrates the `votedHazards` Set from localStorage; `voteHazardGone()` (~**line 1174**) returns early if `votedHazards.has(hazardId)`; after a successful transaction the id is added and persisted (line ~1196).
+2. Demo the protection: vote once → the button flips to "You voted (x/y)" and disables. Reload → still disabled. 
+3. To simulate "another device" so you can keep testing: clear the votes from the console, then reload:
+   ```js
+   Object.keys(localStorage).filter(k => k.startsWith('streetHazards:voted:')).forEach(k => localStorage.removeItem(k));
+   ```
+4. If the judge pushes back ("that's client-side — I could clear localStorage"): the honest upgrade is server-side — store `voterIds: []` on each hazard doc and, inside the *existing* transaction, read the doc and `if (voterIds.includes(uid)) return;` before pushing the uid. Rules can't express "array doesn't contain uid" cleanly, so the transaction is the right place.
+
+### Drill 7 — "Show a toast when a report is submitted."
+
+*What they're checking:* you can add UI + wire it into an async success path without breaking the flow.
+
+1. `submitReport()` at **line 1009**. The success path (~lines 1077–1080) ends with:
+   ```js
+   renderRewards();
+   renderPortfolio();
+   closeReportPanel();
+   nodes.status.textContent = 'Report submitted. Thank you.';
+   ```
+2. Add a tiny helper at the top level of `js/game.js`:
+   ```js
+   function showToast(message) {
+     let toast = document.getElementById('app-toast');
+     if (!toast) {
+       toast = document.createElement('div');
+       toast.id = 'app-toast';
+       document.body.appendChild(toast);
+     }
+     toast.textContent = message;
+     toast.classList.add('show');
+     clearTimeout(showToast._timer);
+     showToast._timer = setTimeout(() => toast.classList.remove('show'), 2600);
+   }
+   ```
+3. Call it right after `closeReportPanel()` in the success path (inside the `try`, so errors still go to the catch):
+   ```js
+   showToast('Report submitted. Thank you.');
+   ```
+4. Add one CSS rule to `css/game.css`:
+   ```css
+   #app-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+     background: #172033; color: #fff; padding: 10px 18px; border-radius: 999px;
+     opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 2000; }
+   #app-toast.show { opacity: 1; }
+   ```
+5. Verify: as a guest, Report a hazard → click the map → pick a type → Submit → the toast pops over the map, a marker appears, and the Network tab shows the Firestore write.
+6. **Trap:** `closeReportPanel()` clears `nodes.status`, and the panel is hidden after submit anyway — so the toast (not the status text) is the confirmation the user actually sees.
 
 ---
 
 ## 6. Gotchas to mention confidently
 
+- **Live rules are still wide open (checked 2026-09-06).** An unauthenticated request can create *and delete* hazard docs in production — the deployed rules are still Firebase's starter `allow read, write` default from the first commit (`firestore.rules`, commit `4ac270b`). The repo's stricter rules (guest create/update until 2026-10-05, **no client delete**, private `/users`) were never deployed. This is how all the demo seed data vanished once — anyone could run the seed page's "Remove demo data" or delete in the console. Fix: `firebase deploy --only firestore`, then the deletion path is closed for good. Demo data has since been re-seeded (~150 demo + 2 real reports).
 - **Bug we fixed that you can reference:** `fsServerTimestamp()` was async but never awaited in `submitReport`, so `createdAt` was a Promise and **every report submission was broken** after the team merge. We found it by submitting as a guest and reading the console.
 - **Merge story:** Stanley's original map app (`script.js`/`styles.css`) and Jaydon's game-first SPA were merged into one `game.js` map module — voting, place search, nearby sidebar, custom types all ported, dead files deleted. Be ready to explain *why* one merged file beats two (no duplicate state/logic).
 - **Deploy:** `firebase deploy --only hosting,firestore`. The repo is always ahead of the live site until someone deploys — a common "why don't I see it" answer.

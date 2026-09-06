@@ -1851,3 +1851,80 @@ body {
     width: clamp(16px, 4.6vw, 28px);
   }
 }
+
+/* ---------------- About / FAQ page (about.html) ---------------- */
+
+.about-main {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 36px 20px 90px;
+}
+
+.about-eyebrow {
+  color: #3b82f6;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+.about-title {
+  color: #e8eef4;
+  font-size: clamp(24px, 4vw, 36px);
+  line-height: 1.15;
+  margin: 0 0 12px;
+}
+
+.about-lead {
+  color: #93a7b8;
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0 0 32px;
+}
+
+.about-section {
+  color: #93a7b8;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+}
+
+.about-card {
+  background: #101a26;
+  border: 1px solid rgba(148, 190, 220, 0.14);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 14px;
+}
+
+.about-card h4 {
+  color: #e8eef4;
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
+.about-card p {
+  color: #b9c8d6;
+  font-size: 15px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.about-card p strong {
+  color: #e8eef4;
+}
+
+.about-footer {
+  margin-top: 26px;
+}
+
+.about-footer a {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.about-footer a:hover {
+  text-decoration: underline;
+}
