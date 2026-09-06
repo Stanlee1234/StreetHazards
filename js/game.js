@@ -596,11 +596,16 @@ const mapModule = (() => {
   let reportMarker = null;
   let hazardLayers = [];
   let leaderboard = {};
-  const playerId = localStorage.getItem('streethazards-player-id') || crypto.randomUUID();
-  const playerName = localStorage.getItem('streethazards-player-name') || 'Street Sentinel';
+  // Guest identity persists in localStorage; points earned as a guest are
+  // kept there and merged into the account doc the first time the guest
+  // signs in ("you keep points only if you log in").
+  const GUEST_KEY = 'streethazards-guest-id';
+  const guestId = localStorage.getItem(GUEST_KEY) || 'guest-' + crypto.randomUUID();
+  localStorage.setItem(GUEST_KEY, guestId);
 
-  localStorage.setItem('streethazards-player-id', playerId);
-  localStorage.setItem('streethazards-player-name', playerName);
+  let userDoc = null; // live /users/{uid} snapshot for the signed-in user
+  let myReports = []; // hazards reported by the current identity
+  let portfolioUnsub = null;
 
   const nodes = {
     panel: document.getElementById('report-panel'),
@@ -622,25 +627,69 @@ const mapModule = (() => {
     rewardNext: document.getElementById('reward-next-text'),
     badges: document.getElementById('badge-row'),
     leaderboard: document.getElementById('leaderboard-list'),
-    leaderboardCount: document.getElementById('leaderboard-count')
-  };
+    leaderboardCount: document.getElementById('leaderboard-count'),
+    portfolioPoints: document.getElementById('portfolio-points'),
+    portfolioReports: document.getElementById('portfolio-reports'),
+    portfolioBadge: document.getElementById('portfolio-badge'),
+    portfolioIdentity: document.getElementById('portfolio-identity'),
+    portfolioNote: document.getElementById('portfolio-note'),
+    portfolioList: document.getElementById('portfolio-list')
+  };  // Points/reports source of truth: account doc when signed in, else guest localStorage.
+  function currentStats() {
+    if (authUser && userDoc) {
+      return { reports: userDoc.reports || 0, points: userDoc.points || 0 };
+    }
+    const guestReports = Number(localStorage.getItem('streethazards-report-count') || 0);
+    return { reports: guestReports, points: guestReports * 100 };
+  }
 
-  function getReportCount() {
-    return Number(localStorage.getItem('streethazards-report-count') || 0);
+  function badgeFor(count) {
+    return count >= 10 ? 'City Guardian' : count >= 3 ? 'Street Watcher' : 'First Responder';
   }
 
   function renderRewards() {
-    const count = getReportCount();
-    const points = count * 100;
+    const { reports: count, points } = currentStats();
     const next = count < 1 ? 1 : count < 3 ? 3 : 10;
-    const badge = count >= 10 ? 'City Guardian' : count >= 3 ? 'Street Watcher' : 'First Responder';
     nodes.points.textContent = points;
-    nodes.rewardBadge.textContent = badge;
+    nodes.rewardBadge.textContent = badgeFor(count);
     nodes.rewardNext.textContent = count >= 10 ? 'All rewards unlocked' : `${next - count} report${next - count === 1 ? '' : 's'} to unlock`;
     nodes.rewardProgress.style.width = `${Math.min(100, (count / next) * 100)}%`;
     nodes.badges.querySelector('[data-badge="first"]').classList.toggle('locked', count < 1);
     nodes.badges.querySelector('[data-badge="watch"]').classList.toggle('locked', count < 3);
     nodes.badges.querySelector('[data-badge="guardian"]').classList.toggle('locked', count < 10);
+  }
+
+  function renderPortfolio() {
+    if (!nodes.portfolioPoints) return;
+    const { reports, points } = currentStats();
+    nodes.portfolioPoints.textContent = points;
+    nodes.portfolioReports.textContent = reports;
+    nodes.portfolioBadge.textContent = badgeFor(reports);
+    if (authUser) {
+      nodes.portfolioIdentity.textContent = (authUser.displayName || authUser.email || 'Signed in').split(' ')[0];
+      nodes.portfolioNote.textContent = 'Signed in — your points and reports are saved to your account.';
+      if (myReports.length) {
+        nodes.portfolioList.innerHTML = myReports.slice(0, 6).map((h) => `
+          <div class="leaderboard-entry">
+            <span class="leaderboard-name">${h.type || 'Hazard'} <span class="leaderboard-reports">${formatTimeAgo(h.createdAt)}</span></span>
+          </div>`).join('');
+      } else {
+        nodes.portfolioList.innerHTML = '<div class="leaderboard-empty">No reports yet — click the map to report a hazard.</div>';
+      }
+    } else {
+      nodes.portfolioIdentity.textContent = 'Guest';
+      nodes.portfolioNote.textContent = 'Reporting as guest — points are stored on this device only. Sign in to keep them.';
+      nodes.portfolioList.innerHTML = '<div class="leaderboard-empty">Sign in to build your saved portfolio.</div>';
+    }
+  }
+
+  function formatTimeAgo(ts) {
+    if (!ts || !ts.toDate) return 'just now';
+    const mins = Math.round((Date.now() - ts.toDate().getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+    return `${Math.round(mins / 1440)}d ago`;
   }
 
   function renderLeaderboard() {
@@ -650,13 +699,15 @@ const mapModule = (() => {
       nodes.leaderboard.innerHTML = '<div class="leaderboard-empty">Be the first sentinel on the board.</div>';
       return;
     }
-    nodes.leaderboard.innerHTML = entries.map((entry, index) => `
-      <div class="leaderboard-entry ${entry.id === playerId ? 'current' : ''}">
+    nodes.leaderboard.innerHTML = entries.map((entry, index) => {
+      const isMe = authUser ? entry.id === authUser.uid : entry.id === guestId;
+      return `
+      <div class="leaderboard-entry ${isMe ? 'current' : ''}">
         <span class="leaderboard-rank">${['①', '②', '③'][index] || `${index + 1}.`}</span>
-        <span class="leaderboard-name">${entry.name}${entry.id === playerId ? ' <b>YOU</b>' : ''}</span>
+        <span class="leaderboard-name">${entry.name}${isMe ? ' <b>YOU</b>' : ''}</span>
         <span class="leaderboard-reports">${entry.reports * 100} pts</span>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   }
 
   function applyFilter() {
@@ -716,7 +767,35 @@ const mapModule = (() => {
       if (nodes.authNotice) nodes.authNotice.hidden = true;
     } else {
       nodes.authBtn.textContent = 'Sign in';
-      nodes.authBtn.title = 'Sign in to report hazards';
+      nodes.authBtn.title = 'Sign in to keep your points';
+      if (nodes.authNotice) nodes.authNotice.hidden = false;
+    }
+    renderRewards();
+    renderPortfolio();
+  }
+
+  // Merge guest points into the account the first time the user signs in,
+  // then clear the device-local guest tally so points follow the account.
+  async function mergeGuestPoints() {
+    const guestReports = Number(localStorage.getItem('streethazards-report-count') || 0);
+    if (!authUser || guestReports < 1) return;
+    try {
+      const firestore = await initFirebase();
+      if (!firestore) return;
+      const mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const ref = mod.doc(firestore, 'users', authUser.uid);
+      await mod.runTransaction(firestore, async (tx) => {
+        const snap = await tx.get(ref);
+        const base = snap.exists() ? snap.data() : {};
+        tx.set(ref, {
+          reports: (base.reports || 0) + guestReports,
+          points: (base.points || 0) + guestReports * 100,
+          name: authUser.displayName || authUser.email || 'Street Sentinel'
+        }, { merge: true });
+      });
+      localStorage.removeItem('streethazards-report-count');
+    } catch (err) {
+      console.warn('Could not merge guest points:', err && err.message);
     }
   }
 
@@ -727,14 +806,40 @@ const mapModule = (() => {
       const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
       const app = appMod.initializeApp(FIREBASE_CONFIG);
       auth = authMod.getAuth(app);
-      authMod.onAuthStateChanged(auth, (user) => {
+      authMod.onAuthStateChanged(auth, async (user) => {
         authUser = user;
         renderAuthState();
+        if (user) {
+          await mergeGuestPoints();
+          subscribeToUserDoc(user.uid);
+        } else {
+          userDoc = null;
+          myReports = [];
+          if (portfolioUnsub) { portfolioUnsub(); portfolioUnsub = null; }
+          renderRewards();
+          renderPortfolio();
+        }
       });
       return auth;
     } catch (err) {
       console.warn('Sign-in unavailable:', err && err.message);
       return null;
+    }
+  }
+
+  async function subscribeToUserDoc(uid) {
+    const firestore = await initFirebase();
+    if (!firestore) return;
+    try {
+      const mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      if (portfolioUnsub) portfolioUnsub();
+      portfolioUnsub = mod.onSnapshot(mod.doc(firestore, 'users', uid), (snap) => {
+        userDoc = snap.exists() ? snap.data() : { reports: 0, points: 0 };
+        renderRewards();
+        renderPortfolio();
+      });
+    } catch (err) {
+      console.warn('Portfolio sync unavailable:', err && err.message);
     }
   }
 
@@ -851,16 +956,14 @@ const mapModule = (() => {
       nodes.status.className = 'report-status error';
       return;
     }
-    if (!authUser) {
-      if (nodes.authNotice) nodes.authNotice.hidden = false;
-      nodes.status.textContent = 'Sign in with Google to submit a report.';
-      nodes.status.className = 'report-status error';
-      return;
-    }
 
     nodes.submit.disabled = true;
     nodes.status.textContent = 'Submitting report...';
     nodes.status.className = 'report-status';
+
+    const identity = authUser
+      ? { id: authUser.uid, name: authUser.displayName || authUser.email || 'Street Sentinel' }
+      : { id: guestId, name: 'Guest' };
 
     try {
       const firestore = await initFirebase();
@@ -871,12 +974,30 @@ const mapModule = (() => {
         details: document.getElementById('hazard-details').value.trim(),
         lat: selectedLocation.lat,
         lng: selectedLocation.lng,
-        createdAt: fsServerTimestamp(),
-        reporterId: authUser.uid,
-        reporterName: authUser.displayName || authUser.email || 'Street Sentinel'
+        createdAt: await fsServerTimestamp(),
+        reporterId: identity.id,
+        reporterName: identity.name
       });
-      localStorage.setItem('streethazards-report-count', String(getReportCount() + 1));
+
+      if (authUser) {
+        // Account holder: increment the Firestore user doc.
+        const mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+        const ref = mod.doc(firestore, 'users', authUser.uid);
+        await mod.runTransaction(firestore, async (tx) => {
+          const snap = await tx.get(ref);
+          const base = snap.exists() ? snap.data() : {};
+          tx.set(ref, {
+            reports: (base.reports || 0) + 1,
+            points: (base.points || 0) + 100,
+            name: identity.name
+          }, { merge: true });
+        });
+      } else {
+        // Guest: tally on this device; it merges into the account on sign-in.
+        localStorage.setItem('streethazards-report-count', String(Number(localStorage.getItem('streethazards-report-count') || 0) + 1));
+      }
       renderRewards();
+      renderPortfolio();
       closeReportPanel(); // don't leave the user stuck in the form
       nodes.status.textContent = 'Report submitted. Thank you.';
       nodes.status.className = 'report-status success';
@@ -906,16 +1027,21 @@ const mapModule = (() => {
       const mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
       mod.onSnapshot(mod.collection(firestore, 'hazards'), (snapshot) => {
         leaderboard = {};
+        myReports = [];
+        const myId = authUser ? authUser.uid : guestId;
         snapshot.docs.forEach((doc) => {
           const data = doc.data();
           const id = data.reporterId || 'anonymous';
+          if (id === myId) myReports.push({ id: doc.id, ...data });
           leaderboard[id] = leaderboard[id] || { id, name: data.reporterName || 'Anonymous sentinel', reports: 0 };
           leaderboard[id].reports += 1;
         });
+        myReports.sort((a, b) => (b.createdAt ? b.createdAt.seconds || 0 : 0) - (a.createdAt ? a.createdAt.seconds || 0 : 0));
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added' && map) addHazardMarker(change.doc.data());
         });
         renderLeaderboard();
+        renderPortfolio();
       });
     } catch (err) {
       console.warn('Live hazard feed unavailable:', err && err.message);
