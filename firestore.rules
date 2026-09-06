@@ -1,20 +1,22 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Hazard reports: readable by everyone; guests may create reports too
+    // (time-bound). This is a hackathon demo — swap in auth-only writes if
+    // you need to protect against spam.
     match /hazards/{hazardId} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
       allow read: if true;
-      allow create, update: if request.auth != null
+      allow create, update: if request.time < timestamp.date(2026, 10, 5);
+    }
+
+    // User portfolios: each signed-in user reads/writes only their own doc.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
         && request.time < timestamp.date(2026, 10, 5);
     }
   }
-}
+}
