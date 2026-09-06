@@ -1032,10 +1032,24 @@ const mapModule = (() => {
     'Cracked curb cut for wheelchairs', 'Unlit section of sidewalk'
   ];
   const SEED_NAMES = ['Sammamish Sentinel', 'Demo Reporter', 'Safety Scout', 'Pothole Patrol', 'WalkSafe', 'Neighborhood Watch'];
+  // Dense clusters near real activity + a broad Washington-wide scatter,
+  // so every click adds ~50 hazards spread across the state.
   const SEED_CLUSTERS = [
-    { name: 'Hackathon venue', lat: 47.688951, lng: -122.150207, count: 30, radius: 0.006 },
-    { name: 'Sammamish (20900 NE 44th St)', lat: 47.649127, lng: -122.061691, count: 14, radius: 0.005 },
-    { name: 'Live report #2', lat: 47.773858, lng: -122.223238, count: 6, radius: 0.004 }
+    { name: 'Hackathon venue', lat: 47.688951, lng: -122.150207, count: 15, radius: 0.006 },
+    { name: 'Sammamish (20900 NE 44th St)', lat: 47.649127, lng: -122.061691, count: 12, radius: 0.005 },
+    { name: 'Live report #2', lat: 47.773858, lng: -122.223238, count: 8, radius: 0.004 },
+    // Scatter across Washington: Seattle metro, Tacoma, Everett, Olympia,
+    // Spokane, Tri-Cities, Bellingham, Vancouver WA, Yakima, Wenatchee.
+    {
+      name: 'Washington scatter',
+      lat: 47.4, lng: -121.8, count: 15, radius: 1.9,
+      spread: [
+        [47.6062, -122.3321], [47.2414, -122.4598], [47.9787, -122.2021],
+        [47.0379, -122.9007], [47.6588, -117.4260], [46.2080, -119.1058],
+        [48.7519, -122.4787], [45.6387, -122.6615], [46.6021, -120.5059],
+        [47.4473, -120.3253]
+      ]
+    }
   ];
 
   async function seedDemoData() {
@@ -1055,12 +1069,22 @@ const mapModule = (() => {
           const batch = mod.writeBatch(firestore);
           const chunk = Math.min(400, cluster.count - i);
           for (let j = 0; j < chunk; j++) {
+            let lat, lng;
+            if (cluster.spread) {
+              // Scatter across a list of Washington cities.
+              const [sLat, sLng] = pick(cluster.spread);
+              lat = sLat + rnd(-0.08, 0.08);
+              lng = sLng + rnd(-0.08, 0.08);
+            } else {
+              lat = cluster.lat + rnd(-cluster.radius, cluster.radius);
+              lng = cluster.lng + rnd(-cluster.radius, cluster.radius);
+            }
             const ref = mod.doc(mod.collection(firestore, 'hazards'));
             batch.set(ref, {
               type: pick(SEED_TYPES),
               details: pick(SEED_DETAILS),
-              lat: cluster.lat + rnd(-cluster.radius, cluster.radius),
-              lng: cluster.lng + rnd(-cluster.radius, cluster.radius),
+              lat,
+              lng,
               activeVotes: Math.floor(rnd(0, 4)),
               notThereVotes: 0,
               resolved: false,
