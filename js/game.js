@@ -1020,6 +1020,72 @@ const mapModule = (() => {
     return fsMod.serverTimestamp();
   }
 
+  // One-click demo seeding: works for guests too (rules allow guest creates).
+  const SEED_TYPES = ['Pothole', 'Crash', 'Road block', 'Broken streetlight', 'Flood', 'Other'];
+  const SEED_DETAILS = [
+    'Large pothole near the curb', 'Broken glass on the sidewalk',
+    'Traffic cone knocked into the road', 'Faded crosswalk markings',
+    'Cracked pavement, easy to trip on', 'Sign bent at the base',
+    'Debris spilling into the bike lane', 'Standing water covering the gutter',
+    'Loose manhole cover', 'Low-hanging branch over the path',
+    'Construction barrier tipped over', 'Poor visibility at this corner',
+    'Cracked curb cut for wheelchairs', 'Unlit section of sidewalk'
+  ];
+  const SEED_NAMES = ['Sammamish Sentinel', 'Demo Reporter', 'Safety Scout', 'Pothole Patrol', 'WalkSafe', 'Neighborhood Watch'];
+  const SEED_CLUSTERS = [
+    { name: 'Hackathon venue', lat: 47.688951, lng: -122.150207, count: 30, radius: 0.006 },
+    { name: 'Sammamish (20900 NE 44th St)', lat: 47.649127, lng: -122.061691, count: 14, radius: 0.005 },
+    { name: 'Live report #2', lat: 47.773858, lng: -122.223238, count: 6, radius: 0.004 }
+  ];
+
+  async function seedDemoData() {
+    const btn = document.getElementById('seed-demo-btn');
+    const statusEl = document.getElementById('seed-demo-status');
+    if (btn) btn.disabled = true;
+    if (statusEl) statusEl.textContent = 'Seeding…';
+    try {
+      const firestore = await initFirebase();
+      if (!firestore) throw new Error('Community map is offline');
+      const mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const rnd = (min, max) => min + Math.random() * (max - min);
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      let total = 0;
+      for (const cluster of SEED_CLUSTERS) {
+        for (let i = 0; i < cluster.count; i += 400) {
+          const batch = mod.writeBatch(firestore);
+          const chunk = Math.min(400, cluster.count - i);
+          for (let j = 0; j < chunk; j++) {
+            const ref = mod.doc(mod.collection(firestore, 'hazards'));
+            batch.set(ref, {
+              type: pick(SEED_TYPES),
+              details: pick(SEED_DETAILS),
+              lat: cluster.lat + rnd(-cluster.radius, cluster.radius),
+              lng: cluster.lng + rnd(-cluster.radius, cluster.radius),
+              activeVotes: Math.floor(rnd(0, 4)),
+              notThereVotes: 0,
+              resolved: false,
+              demo: true,
+              reporterId: authUser ? authUser.uid : guestId,
+              reporterName: authUser ? (authUser.displayName || authUser.email || 'Street Sentinel') : pick(SEED_NAMES),
+              createdAt: mod.serverTimestamp()
+            });
+          }
+          await batch.commit();
+          total += chunk;
+        }
+      }
+      if (statusEl) {
+        statusEl.textContent = `Seeded ${total} demo hazards ✓`;
+        setTimeout(() => { statusEl.textContent = ''; }, 6000);
+      }
+    } catch (err) {
+      console.warn('Demo seeding failed:', err && err.message);
+      if (statusEl) statusEl.textContent = 'Seeding failed — try again.';
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   async function watchHazards() {
     const firestore = await initFirebase();
     if (!firestore) return;
@@ -1066,6 +1132,8 @@ const mapModule = (() => {
       nodes.cancel.addEventListener('click', closeReportPanel);
       nodes.form.addEventListener('submit', submitReport);
       nodes.filter.addEventListener('change', applyFilter);
+      const seedBtn = document.getElementById('seed-demo-btn');
+      if (seedBtn) seedBtn.addEventListener('click', seedDemoData);
       nodes.locate.addEventListener('click', () => map && map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true }));
       if (nodes.authBtn) {
         nodes.authBtn.addEventListener('click', () => {
