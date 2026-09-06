@@ -625,6 +625,7 @@ const mapModule = (() => {
     status: document.getElementById('report-status'),
     submit: document.getElementById('report-submit'),
     toggle: document.getElementById('report-toggle'),
+    mapView: document.getElementById('map-view'),
     locate: document.getElementById('locate-me'),
     filter: document.getElementById('hazard-filter'),
     authBtn: document.getElementById('map-auth-btn'),
@@ -927,7 +928,9 @@ const mapModule = (() => {
 
   function ensureMap() {
     if (map || typeof L === 'undefined') return;
-    map = L.map('map').setView([0, 0], 2);
+    // Default to Washington state (where reports live) instead of the whole
+    // globe; the locate flow below re-centers on the user once GPS is granted.
+    map = L.map('map').setView([47.45, -121.9], 8);
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -1325,6 +1328,15 @@ const mapModule = (() => {
       const seedBtn = document.getElementById('seed-demo-btn');
       if (seedBtn) seedBtn.addEventListener('click', seedDemoData);
       nodes.locate.addEventListener('click', () => map && map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true }));
+
+      // Keyboard shortcut: press L to center on your location.
+      document.addEventListener('keydown', (e) => {
+        const tag = e.target && e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if ((e.key === 'l' || e.key === 'L') && nodes.mapView.classList.contains('active')) {
+          map && map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true });
+        }
+      });
 
       // Hazards sidebar minimize/expand toggle.
       const sidebar = document.getElementById('hazards-sidebar');
