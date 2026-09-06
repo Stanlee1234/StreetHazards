@@ -245,6 +245,25 @@
           <div class="leaderboard-empty">Be the first sentinel on the board.</div>
         </div>
       </section>
+
+      <section class="portfolio-panel" aria-labelledby="portfolio-title">
+        <div class="panel-heading-row">
+          <div>
+            <div class="panel-kicker"><span aria-hidden="true">✦</span> Your reports</div>
+            <h2 id="portfolio-title">My Portfolio</h2>
+          </div>
+          <span class="portfolio-identity" id="portfolio-identity">Guest</span>
+        </div>
+        <div class="portfolio-stats">
+          <div class="portfolio-stat"><strong id="portfolio-points">0</strong><span>points</span></div>
+          <div class="portfolio-stat"><strong id="portfolio-reports">0</strong><span>reports</span></div>
+          <div class="portfolio-stat"><strong id="portfolio-badge">—</strong><span>badge</span></div>
+        </div>
+        <p class="portfolio-note" id="portfolio-note">Sign in with Google to keep your points and see your reports.</p>
+        <div class="portfolio-list" id="portfolio-list">
+          <div class="leaderboard-empty">No reports yet — click the map to report a hazard.</div>
+        </div>
+      </section>
     </div>
 
     <!-- ============ REPORT PANEL (report-a-hazard form) ============ -->
@@ -258,8 +277,8 @@
       </div>
       <p class="report-location" id="report-location">No location selected</p>
       <div class="report-auth-notice" id="report-auth-notice" role="status" hidden>
-        <strong>Sign in required</strong>
-        <span>Sign in with Google before submitting a hazard report.</span>
+        <strong>Reporting as guest</strong>
+        <span>Guests can report hazards right now. Sign in to keep your points and build your portfolio.</span>
         <button id="report-auth-button" type="button">Sign in with Google</button>
       </div>
       <form id="report-form">

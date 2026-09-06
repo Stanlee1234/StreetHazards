@@ -890,12 +890,57 @@ body {
 }
 
 .reward-panel,
-.leaderboard-panel {
+.leaderboard-panel,
+.portfolio-panel {
   min-width: 0;
   padding: 18px;
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
   background: linear-gradient(180deg, rgba(17, 28, 40, 0.96), rgba(12, 20, 29, 0.96));
+}
+
+.portfolio-panel {
+  grid-column: 1 / -1;
+}
+
+.portfolio-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 14px 0 12px;
+}
+
+.portfolio-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.portfolio-stat strong {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.portfolio-stat span {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.portfolio-note {
+  margin: 0 0 12px;
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+
+.portfolio-list {
+  display: grid;
+  gap: 8px;
 }
 
 .panel-kicker {
