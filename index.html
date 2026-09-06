@@ -21,6 +21,10 @@
       <button class="hazards-sidebar-toggle" id="hazards-sidebar-toggle" type="button" aria-label="Minimize hazards sidebar" aria-expanded="true">&lsaquo;</button>
     </div>
     <p id="hazards-status">Locating you...</p>
+    <div class="hazard-tabs" role="tablist" aria-label="Hazard views">
+      <button class="hazard-tab is-active" id="nearby-hazards-tab" type="button" role="tab" aria-selected="true">Closest hazards</button>
+      <button class="hazard-tab" id="my-hazards-tab" type="button" role="tab" aria-selected="false">My hazards</button>
+    </div>
     <div class="hazard-list" id="hazard-list" aria-live="polite">
       <p class="hazard-empty">Loading hazards...</p>
     </div>
@@ -31,7 +35,7 @@
   <form class="place-search" id="place-search" role="search">
     <label class="sr-only" for="place-search-input">Search for a restaurant or landmark</label>
     <input id="place-search-input" type="search" placeholder="Search restaurants and landmarks" autocomplete="off" />
-    <button type="submit" aria-label="Search">
+    <button class="place-search-submit" type="submit" aria-label="Search">
       <span class="search-icon" aria-hidden="true"></span>
       <span class="sr-only">Search</span>
     </button>
@@ -41,7 +45,6 @@
     <span class="sr-only" id="auth-status">Sign in to report or vote</span>
     <button id="auth-button" type="button">Sign in</button>
   </div>
-  <a class="about-link" href="about.html">About</a>
 
   <section class="report-panel" id="report-panel" aria-labelledby="report-title">
     <div class="report-header">

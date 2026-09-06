@@ -185,6 +185,10 @@ body.sidebar-minimized #map {
 	display: none;
 }
 
+.hazards-sidebar.is-minimized .hazard-tabs {
+	display: none;
+}
+
 .hazards-sidebar.is-minimized .report-toggle {
 	display: none;
 }
@@ -203,6 +207,31 @@ body.sidebar-minimized #map {
 .hazard-list {
 	display: grid;
 	gap: 10px;
+}
+
+.hazard-tabs {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 4px;
+	margin: 0 0 14px;
+	padding: 3px;
+	border-radius: 6px;
+	background: #e2e8f0;
+}
+
+.hazard-tab {
+	border: 0;
+	border-radius: 4px;
+	padding: 8px 6px;
+	background: transparent;
+	color: #64748b;
+	font: 700 12px/1.2 system-ui, sans-serif;
+	cursor: pointer;
+}
+
+.hazard-tab.is-active {
+	background: #ffffff;
+	color: #172033;
 }
 
 .hazard-item {
@@ -272,6 +301,7 @@ body.sidebar-minimized #map {
 }
 
 .hazard-vote,
+.hazard-active-vote,
 .hazard-google-maps {
 	display: block;
 	width: 100%;
@@ -296,6 +326,8 @@ body.sidebar-minimized #map {
 
 .hazard-vote:hover,
 .hazard-vote:focus-visible,
+.hazard-active-vote:hover,
+.hazard-active-vote:focus-visible,
 .hazard-google-maps:hover,
 .hazard-google-maps:focus-visible {
 	background: #fecaca;
@@ -303,6 +335,7 @@ body.sidebar-minimized #map {
 }
 
 .hazard-vote:disabled,
+.hazard-active-vote:disabled,
 .hazard-google-maps:disabled {
 	cursor: default;
 	opacity: 0.65;
