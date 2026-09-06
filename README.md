@@ -7,9 +7,7 @@ StreetHazards is a public-safety web app with two parts sharing one page:
 - A **community hazard map** where people can report road hazards, see reports clustered on a Leaflet map, sort them by distance, and vote when a hazard is no longer present.
 - A **HazardHunt game** — an interactive "can you spot the hazards?" challenge built on an illustrated city scene.
 
-Both live in the same `index.html` and are served from a single Firebase Hosting site at **https://streethazards.web.app/** (and the mirrored `https://streethazards.firebaseapp.com/`).
-
-**Repository:** https://github.com/Stanlee1234/StreetHazards
+Both live in the same `index.html` and are served from a single Firebase Hosting site at **https://streethazards.web.app/** (mirrored at https://streethazards.firebaseapp.com/).
 
 ## Feature split
 
