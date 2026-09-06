@@ -17,21 +17,21 @@
 
   <!-- HEADER -->
   <header class="app-header">
-    <div class="brand">
+    <a class="brand" href="#map" title="Back to the community map">
       <div class="brand-icon" aria-hidden="true">🚨</div>
       <div class="brand-text">
         <h1>HAZARDHUNT</h1>
         <span>Public Safety Awareness</span>
       </div>
-    </div>
+    </a>
     <div class="system-status">
       <span class="status-dot"></span>
       SYSTEM ONLINE
     </div>
   </header>
 
-  <!-- ============ START SCREEN ============ -->
-  <section class="view active" id="start-view">
+  <!-- ============ START SCREEN (game intro — opened from the map CTA) ============ -->
+  <section class="view" id="start-view">
     <div class="eyebrow">Mission 01 · Urban Awareness</div>
     <h2 class="start-title">HAZARDHUNT</h2>
     <p class="start-subtitle">Can you spot what others miss?</p>
@@ -41,6 +41,9 @@
     </p>
     <button class="btn" id="start-hunt-btn" type="button">
       <span class="button-icon" aria-hidden="true">▶</span> Start Hunt
+    </button>
+    <button class="btn ghost" id="start-map-btn" type="button">
+      <span class="button-icon" aria-hidden="true">⌖</span> Back to Map
     </button>
 
     <div class="how-it-works" id="how-it-works">
@@ -98,6 +101,7 @@
       <div class="scene-toolbar">
         <div class="scene-name">🏙️ Downtown District <span>/ Observation Area</span></div>
         <div class="scene-hint">Click anywhere on the scene you think is unsafe</div>
+        <button class="map-tool" id="game-fs-btn" type="button" title="Fullscreen game" aria-label="Toggle game fullscreen">⛶</button>
       </div>
 
       <div class="artwork-wrap">
@@ -126,6 +130,9 @@
         </button>
         <button class="btn small" id="restart-btn" type="button">
           <span class="button-icon" aria-hidden="true">↻</span> Restart Hunt
+        </button>
+        <button class="btn ghost small" id="game-exit-btn" type="button">
+          <span class="button-icon" aria-hidden="true">⌖</span> Exit to Map
         </button>
       </div>
     </div>
@@ -170,8 +177,8 @@
     </div>
   </section>
 
-  <!-- ============ MAP VIEW (community reports) ============ -->
-  <section class="view" id="map-view">
+  <!-- ============ MAP VIEW (community reports) — HOME ============ -->
+  <section class="view active" id="map-view">
     <div class="map-card">
       <div class="map-toolbar">
         <div class="scene-name">
@@ -180,6 +187,9 @@
         </div>
         <div class="map-actions">
           <button class="map-tool" id="locate-me" type="button" title="Center on my location" aria-label="Center on my location">◎</button>
+          <button class="map-tool" id="map-fs-btn" type="button" title="Fullscreen map" aria-label="Toggle map fullscreen">⛶</button>
+          <button class="map-tool" id="map-auth-btn" type="button" title="Sign in to report hazards" aria-label="Sign in">Sign in</button>
+          <button class="btn" id="map-play-btn" type="button"><span class="button-icon" aria-hidden="true">▶</span> Play HazardHunt</button>
           <button class="report-toggle" id="report-toggle" type="button">
             <span aria-hidden="true">+</span> Report a hazard
           </button>
@@ -210,7 +220,7 @@
           </div>
           <div class="reward-emblem" aria-hidden="true">★</div>
         </div>
-        <div class="reward-score"><strong>0</strong><span>points</span></div>
+        <div class="reward-score"><strong id="report-points">0</strong><span>points</span></div>
         <div class="reward-track"><span id="reward-progress"></span></div>
         <div class="reward-next">
           <span id="reward-badge">First Responder</span>
@@ -235,6 +245,25 @@
           <div class="leaderboard-empty">Be the first sentinel on the board.</div>
         </div>
       </section>
+
+      <section class="portfolio-panel" aria-labelledby="portfolio-title">
+        <div class="panel-heading-row">
+          <div>
+            <div class="panel-kicker"><span aria-hidden="true">✦</span> Your reports</div>
+            <h2 id="portfolio-title">My Portfolio</h2>
+          </div>
+          <span class="portfolio-identity" id="portfolio-identity">Guest</span>
+        </div>
+        <div class="portfolio-stats">
+          <div class="portfolio-stat"><strong id="portfolio-points">0</strong><span>points</span></div>
+          <div class="portfolio-stat"><strong id="portfolio-reports">0</strong><span>reports</span></div>
+          <div class="portfolio-stat"><strong id="portfolio-badge">—</strong><span>badge</span></div>
+        </div>
+        <p class="portfolio-note" id="portfolio-note">Sign in with Google to keep your points and see your reports.</p>
+        <div class="portfolio-list" id="portfolio-list">
+          <div class="leaderboard-empty">No reports yet — click the map to report a hazard.</div>
+        </div>
+      </section>
     </div>
 
     <!-- ============ REPORT PANEL (report-a-hazard form) ============ -->
@@ -247,9 +276,9 @@
         <button class="report-close" id="report-close" type="button" aria-label="Close report form">&times;</button>
       </div>
       <p class="report-location" id="report-location">No location selected</p>
-      <div class="report-auth-notice" id="report-auth-notice" role="status">
-        <strong>Sign in required</strong>
-        <span>Sign in with Google before submitting a hazard report.</span>
+      <div class="report-auth-notice" id="report-auth-notice" role="status" hidden>
+        <strong>Reporting as guest</strong>
+        <span>Guests can report hazards right now. Sign in to keep your points and build your portfolio.</span>
         <button id="report-auth-button" type="button">Sign in with Google</button>
       </div>
       <form id="report-form">
@@ -275,11 +304,6 @@
       </form>
     </section>
 
-    <div style="text-align:center; margin-top: 22px;">
-      <button class="btn ghost" id="map-back-btn" type="button">
-        <span class="button-icon" aria-hidden="true">←</span> Back to the Hunt
-      </button>
-    </div>
   </section>
 
   <script

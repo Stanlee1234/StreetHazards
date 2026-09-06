@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HazardHunt — Demo Data Seeder</title>
+  <link rel="stylesheet" href="css/game.css" />
+  <style>
+    body { padding: 28px; max-width: 640px; margin: 0 auto; font-family: system-ui, sans-serif; }
+    .seed-card {
+      border: 1px solid var(--panel-edge, rgba(148,190,220,.14));
+      border-radius: 14px;
+      background: var(--panel, #101a26);
+      padding: 22px;
+      margin-top: 18px;
+      color: var(--ink, #e8eef4);
+    }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    p { color: var(--ink-dim, #93a7b8); font-size: 13px; line-height: 1.6; }
+    .status {
+      padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px;
+      background: rgba(255,255,255,.04);
+    }
+    .status.ok { border: 1px solid rgba(46,213,115,.4); color: #7ff0a9; }
+    .status.err { border: 1px solid rgba(255,71,87,.4); color: #ff8d94; }
+    button {
+      border: 0; border-radius: 8px; padding: 12px 18px; margin: 8px 8px 0 0;
+      font: 700 13px/1 system-ui, sans-serif; cursor: pointer;
+    }
+    .btn-primary { background: var(--accent, #e0392c); color: #fff; }
+    .btn-ghost { background: rgba(255,255,255,.08); color: var(--ink, #e8eef4); }
+    .btn-danger { background: rgba(255,71,87,.15); color: #ff8d94; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <h1>🧪 HazardHunt Demo Seeder</h1>
+  <p>
+    Dev-only tool. Signs in with Google, then bulk-inserts random demo hazards
+    into the live Firestore <code>hazards</code> collection — clustered around the
+    hackathon venue, the Sammamish address, and scattered across the area.
+    All demo docs are tagged <code>demo: true</code> so they can be removed in one click.
+  </p>
+
+  <div class="seed-card">
+    <div class="status" id="seed-status">Waiting to sign in…</div>
+    <div>
+      <button class="btn-primary" id="seed-populate" disabled>Populate demo data</button>
+      <button class="btn-danger" id="seed-clear" disabled>Remove demo data</button>
+    </div>
+    <p style="margin-top:14px">Current hazard count in Firestore: <strong id="seed-count">—</strong></p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import {
+      getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, deleteDoc, doc,
+      onSnapshot, writeBatch, query, where, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCgVFIf6hyHjAmAf26rD9HbQcwR2OAyxgo",
+      authDomain: "streethazards-2a.firebaseapp.com",
+      projectId: "streethazards-2a",
+      storageBucket: "streethazards-2a.firebasestorage.app",
+      messagingSenderId: "919052017737",
+      appId: "1:919052017737:web:b5c19b9261c68a45729f98",
+      measurementId: "G-KVJPSJ0JH4"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const hazardsRef = collection(db, "hazards");
+
+    const statusEl = document.getElementById("seed-status");
+    const countEl = document.getElementById("seed-count");
+    const populateBtn = document.getElementById("seed-populate");
+    const clearBtn = document.getElementById("seed-clear");
+
+    const TYPES = ["Pothole", "Crash", "Road block", "Broken streetlight", "Flood", "Other"];
+    const DETAILS = [
+      "Large pothole near the curb", "Broken glass on the sidewalk",
+      "Traffic cone knocked into the road", "Faded crosswalk markings",
+      "Cracked pavement, easy to trip on", "Sign bent at the base",
+      "Debris spilling into the bike lane", "Standing water covering the gutter",
+      "Loose manhole cover", "Low-hanging branch over the path",
+      "Construction barrier tipped over", "Poor visibility at this corner",
+      "Cracked curb cut for wheelchairs", "Unlit section of sidewalk"
+    ];
+
+    // Cluster anchors (surveyed live): venue, home, and the second live report.
+    const CLUSTERS = [
+      { name: "Hackathon venue", lat: 47.688951, lng: -122.150207, count: 30, radius: 0.006 },
+      { name: "Sammamish (20900 NE 44th St)", lat: 47.649127, lng: -122.061691, count: 14, radius: 0.005 },
+      { name: "Live report #2", lat: 47.773858, lng: -122.223238, count: 6, radius: 0.004 }
+    ];
+
+    const rnd = (min, max) => min + Math.random() * (max - min);
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    function randomHazard(center) {
+      const lat = center.lat + rnd(-center.radius, center.radius);
+      const lng = center.lng + rnd(-center.radius, center.radius);
+      return {
+        type: pick(TYPES),
+        details: pick(DETAILS),
+        lat,
+        lng,
+        activeVotes: Math.floor(rnd(0, 4)),
+        notThereVotes: 0,
+        resolved: false,
+        demo: true,
+        reporterId: "demo-seed",
+        reporterName: pick(["Sammamish Sentinel", "Demo Reporter", "Safety Scout", "Pothole Patrol", "WalkSafe", "Neighborhood Watch"]),
+        createdAt: serverTimestamp()
+      };
+    }
+
+    function setStatus(text, cls = "") {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (cls ? " " + cls : "");
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setStatus(`Signed in as ${user.displayName || user.email}. Ready to seed.`, "ok");
+        populateBtn.disabled = false;
+        clearBtn.disabled = false;
+      } else {
+        setStatus("Signed out — click the Sign in button that the browser shows.", "");
+        populateBtn.disabled = true;
+        clearBtn.disabled = true;
+        signInWithPopup(auth, new GoogleAuthProvider()).catch((err) => {
+          if (err.code !== "auth/popup-closed-by-user") {
+            setStatus(`Sign-in failed: ${err.message}`, "err");
+          }
+        });
+      }
+    });
+
+    onSnapshot(hazardsRef, (snap) => {
+      countEl.textContent = String(snap.size);
+    });
+
+    populateBtn.addEventListener("click", async () => {
+      populateBtn.disabled = true;
+      setStatus("Seeding demo hazards…", "");
+      try {
+        let total = 0;
+        // Write in batches of 400 (Firestore writeBatch limit) — cluster by cluster.
+        for (const cluster of CLUSTERS) {
+          for (let i = 0; i < cluster.count; i += 400) {
+            const batch = writeBatch(db);
+            const chunk = Math.min(400, cluster.count - i);
+            for (let j = 0; j < chunk; j++) {
+              const ref = doc(hazardsRef);
+              batch.set(ref, randomHazard(cluster));
+            }
+            await batch.commit();
+            total += chunk;
+          }
+        }
+        setStatus(`Seeded ${total} demo hazards. They should appear on the map now.`, "ok");
+      } catch (err) {
+        setStatus(`Seeding failed: ${err.message}`, "err");
+      } finally {
+        populateBtn.disabled = false;
+      }
+    });
+
+    clearBtn.addEventListener("click", async () => {
+      clearBtn.disabled = true;
+      setStatus("Removing demo hazards…", "");
+      try {
+        const q = query(hazardsRef, where("demo", "==", true));
+        const snap = await (await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js")).getDocs(q);
+        let removed = 0;
+        for (let i = 0; i < snap.docs.length; i += 400) {
+          const batch = writeBatch(db);
+          const chunk = snap.docs.slice(i, i + 400);
+          chunk.forEach((d) => batch.delete(doc(hazardsRef, d.id)));
+          await batch.commit();
+          removed += chunk.length;
+        }
+        setStatus(`Removed ${removed} demo hazards.`, "ok");
+      } catch (err) {
+        setStatus(`Removal failed: ${err.message}`, "err");
+      } finally {
+        clearBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
