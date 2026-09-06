@@ -1,67 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Safety Map | StreetHazards</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About & FAQ — HazardHunt</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/game.css" />
 </head>
-<body>
-    <main>
-        <h1>Safety Map</h1>
+<body class="about-page">
 
-        <p>Our website is a safety map.</p>
-        <p>NORBERT IS NOT NORBERT NORBERT IS NOT NORB
-            NORBERT IS NOT NORBERT 
-            NORBERT IS NOT NORBERT ERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT </p>
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT 
+  <!-- HEADER (same look as the main app) -->
+  <header class="app-header">
+    <a class="brand" href="index.html" title="Back to the community map">
+      <div class="brand-icon" aria-hidden="true">🚨</div>
+      <div class="brand-text">
+        <h1>HAZARDHUNT</h1>
+        <span>Public Safety Awareness</span>
+      </div>
+    </a>
+    <div class="header-right">
+      <a class="about-link" href="index.html">Community Map</a>
+      <div class="system-status">
+        <span class="status-dot"></span>
+        SYSTEM ONLINE
+      </div>
+    </div>
+  </header>
 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
-        NORBERT IS NOT NORBERT 
+  <main class="about-main">
+    <p class="about-eyebrow">About StreetHazards</p>
+    <h2 class="about-title">Spot a hazard. Report it. Make the street safer.</h2>
+    <p class="about-lead">
+      StreetHazards is a community public-safety platform. Anyone can report road
+      hazards on a live community map, vote when a report is no longer there, and
+      earn points — or play <strong>HazardHunt</strong>, a timed game that trains
+      your eye to spot dangers in an illustrated city scene. Everything runs in the
+      browser on Firebase; there is no app to install.
+    </p>
 
-        NORBERT IS NOT NORBERT 
-        
+    <h3 class="about-section">Frequently asked questions</h3>
 
-        <p>
-            Users can report potholes, crashes, road blocks, broken streetlights,
-            and other dangerous situations.
-        </p>
+    <section class="about-card">
+      <h4>1. How do I post a hazard?</h4>
+      <p>
+        <strong>Anyone can report — no account needed.</strong> Click
+        <strong>+ Report a hazard</strong>, click the map to pin the exact
+        location, pick a type (choose <em>Other</em> to type your own), add
+        optional details, and submit. Guests post under a private device ID;
+        signing in with Google lets you keep your points and reports across
+        devices.
+      </p>
+    </section>
 
-        <p>The reports will appear on the map.</p>
-        <p>People can use the map to see what is happening nearby.</p>
+    <section class="about-card">
+      <h4>2. Does the map update in real time?</h4>
+      <p>
+        Yes. Reports live in Firestore and every open map listens to changes, so
+        a new report or vote appears for everyone within a moment — no refresh.
+        Your blue location dot comes from your browser's GPS and follows you as
+        you move.
+      </p>
+    </section>
 
-        <p>
-            When an event is over, users can report that it has ended. If several
-            people confirm that it is over, the report will disappear from the map.
-        </p>
+    <section class="about-card">
+      <h4>3. I posted a hazard by accident. Can I delete it?</h4>
+      <p>
+        There is no delete button — by design, so one person can't erase another
+        person's report. Instead, anyone can vote <strong>Vote: not there
+        anymore</strong> on a report; once enough people agree it is marked
+        <em>resolved</em> and disappears from the map for everyone. If you made a
+        genuine mistake, contact the team and an admin can remove it.
+      </p>
+    </section>
 
-        <p>
-            Our goal is to give people quick and useful safety information about
-            what is happening around them.
-        </p>
-    </main>
+    <section class="about-card">
+      <h4>4. How do you stop fake posts?</h4>
+      <p>
+        Guests can post so demos stay frictionless, which is an honest trade-off.
+        Two safeguards: the community itself votes stale reports away, and the
+        database write rules are time-boxed to the hackathon window. In
+        production we'd add per-device rate limits and moderation.
+      </p>
+    </section>
+
+    <section class="about-card">
+      <h4>5. What is the "Seed demo data" button?</h4>
+      <p>
+        It drops ~50 sample hazards across Washington (clustered around the
+        hackathon venue and Sammamish, then scattered statewide) so the map never
+        looks empty during a demo. The samples are tagged <em>demo</em> and don't
+        affect real reports.
+      </p>
+    </section>
+
+    <p class="about-footer">
+      <a href="index.html">← Back to the community map</a>
+    </p>
+  </main>
+
 </body>
 </html>
