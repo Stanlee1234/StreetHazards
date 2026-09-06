@@ -17,13 +17,13 @@
 
   <!-- HEADER -->
   <header class="app-header">
-    <div class="brand">
+    <a class="brand" href="#map" title="Back to the community map">
       <div class="brand-icon" aria-hidden="true">🚨</div>
       <div class="brand-text">
         <h1>HAZARDHUNT</h1>
         <span>Public Safety Awareness</span>
       </div>
-    </div>
+    </a>
     <div class="system-status">
       <span class="status-dot"></span>
       SYSTEM ONLINE
@@ -101,6 +101,7 @@
       <div class="scene-toolbar">
         <div class="scene-name">🏙️ Downtown District <span>/ Observation Area</span></div>
         <div class="scene-hint">Click anywhere on the scene you think is unsafe</div>
+        <button class="map-tool" id="game-fs-btn" type="button" title="Fullscreen game" aria-label="Toggle game fullscreen">⛶</button>
       </div>
 
       <div class="artwork-wrap">
@@ -186,6 +187,8 @@
         </div>
         <div class="map-actions">
           <button class="map-tool" id="locate-me" type="button" title="Center on my location" aria-label="Center on my location">◎</button>
+          <button class="map-tool" id="map-fs-btn" type="button" title="Fullscreen map" aria-label="Toggle map fullscreen">⛶</button>
+          <button class="map-tool" id="map-auth-btn" type="button" title="Sign in to report hazards" aria-label="Sign in">Sign in</button>
           <button class="btn" id="map-play-btn" type="button"><span class="button-icon" aria-hidden="true">▶</span> Play HazardHunt</button>
           <button class="report-toggle" id="report-toggle" type="button">
             <span aria-hidden="true">+</span> Report a hazard
@@ -254,7 +257,7 @@
         <button class="report-close" id="report-close" type="button" aria-label="Close report form">&times;</button>
       </div>
       <p class="report-location" id="report-location">No location selected</p>
-      <div class="report-auth-notice" id="report-auth-notice" role="status">
+      <div class="report-auth-notice" id="report-auth-notice" role="status" hidden>
         <strong>Sign in required</strong>
         <span>Sign in with Google before submitting a hazard report.</span>
         <button id="report-auth-button" type="button">Sign in with Google</button>

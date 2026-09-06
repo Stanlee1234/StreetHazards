@@ -216,6 +216,7 @@ const state = {
   wrongClicks: 0,
   gameOver: false,
   running: false,
+  started: false,
   timerInterval: null
 };
 
@@ -301,9 +302,67 @@ function playSound(key) {
 
 /* ---------------- Screen router ---------------- */
 
-function showView(name) {
+function activateView(name) {
   for (const [key, node] of Object.entries(el.views)) {
     node.classList.toggle('active', key === name);
+  }
+}
+
+function showView(name) {
+  activateView(name);
+  // Keep the URL hash in sync so each view is deep-linkable and the
+  // browser back/forward buttons move freely between screens.
+  if (location.hash !== '#' + name) {
+    history.pushState(null, '', '#' + name);
+  }
+}
+
+function viewFromHash() {
+  const name = (location.hash || '#map').replace(/^#\/?/, '');
+  return el.views[name] ? name : 'map';
+}
+
+function handleRouteChange() {
+  const name = viewFromHash();
+  activateView(name);
+  if (name === 'map') {
+    mapModule.activate();
+  } else if (name === 'game') {
+    // Landing on #game via back/forward: if a hunt is paused mid-way,
+    // resume it; if it never started, start fresh; if it ended, the
+    // results screen is the right place.
+    if (state.gameOver) {
+      showView('results');
+    } else if (state.running) {
+      // already live — nothing to do
+    } else if (state.started) {
+      // a hunt was begun and then paused — resume it exactly where it left off
+      state.running = true;
+      startTimer();
+    } else {
+      resetGame();
+    }
+  }
+}
+
+window.addEventListener('popstate', handleRouteChange);
+window.addEventListener('hashchange', handleRouteChange);
+
+/* ---------------- Fullscreen ---------------- */
+
+function toggleFullscreen(target) {
+  if (!target) return;
+  try {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else if (target.requestFullscreen) {
+      target.requestFullscreen();
+    } else {
+      // Fallback for browsers without the Fullscreen API.
+      target.classList.toggle('fs-fallback');
+    }
+  } catch {
+    /* fullscreen unavailable — fail silently */
   }
 }
 
@@ -483,6 +542,7 @@ function resetGame() {
   state.wrongClicks = 0;
   state.gameOver = false;
   state.running = true;
+  state.started = true;
 
   buildMarkers();
   renderHud();
@@ -553,6 +613,9 @@ const mapModule = (() => {
     toggle: document.getElementById('report-toggle'),
     locate: document.getElementById('locate-me'),
     filter: document.getElementById('hazard-filter'),
+    authBtn: document.getElementById('map-auth-btn'),
+    authNotice: document.getElementById('report-auth-notice'),
+    reportAuthButton: document.getElementById('report-auth-button'),
     points: document.getElementById('report-points'),
     rewardProgress: document.getElementById('reward-progress'),
     rewardBadge: document.getElementById('reward-badge'),
@@ -618,25 +681,90 @@ const mapModule = (() => {
     applyFilter();
   }
 
+  const FIREBASE_CONFIG = {
+    apiKey: 'AIzaSyCgVFIf6hyHjAmAf26rD9HbQcwR2OAyxgo',
+    authDomain: 'streethazards-2a.firebaseapp.com',
+    projectId: 'streethazards-2a',
+    storageBucket: 'streethazards-2a.firebasestorage.app',
+    messagingSenderId: '919052017737',
+    appId: '1:919052017737:web:b5c19b9261c68a45729f98',
+    measurementId: 'G-KVJPSJ0JH4'
+  };
+
+  let auth = null;
+  let authUser = null;
+
   async function initFirebase() {
     if (db) return db;
     try {
       const appMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
       const fsMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-      const app = appMod.initializeApp({
-        apiKey: 'AIzaSyCgVFIf6hyHjAmAf26rD9HbQcwR2OAyxgo',
-        authDomain: 'streethazards-2a.firebaseapp.com',
-        projectId: 'streethazards-2a',
-        storageBucket: 'streethazards-2a.firebasestorage.app',
-        messagingSenderId: '919052017737',
-        appId: '1:919052017737:web:b5c19b9261c68a45729f98',
-        measurementId: 'G-KVJPSJ0JH4'
-      });
+      const app = appMod.initializeApp(FIREBASE_CONFIG);
       db = fsMod.getFirestore(app);
       return db;
     } catch (err) {
       console.warn('Community map is offline:', err && err.message);
       return null;
+    }
+  }
+
+  function renderAuthState() {
+    if (!nodes.authBtn) return;
+    if (authUser) {
+      nodes.authBtn.textContent = (authUser.displayName || authUser.email || 'Signed in').split(' ')[0];
+      nodes.authBtn.title = 'Signed in — click to sign out';
+      if (nodes.authNotice) nodes.authNotice.hidden = true;
+    } else {
+      nodes.authBtn.textContent = 'Sign in';
+      nodes.authBtn.title = 'Sign in to report hazards';
+    }
+  }
+
+  async function initAuth() {
+    if (auth) return auth;
+    try {
+      const appMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+      const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      const app = appMod.initializeApp(FIREBASE_CONFIG);
+      auth = authMod.getAuth(app);
+      authMod.onAuthStateChanged(auth, (user) => {
+        authUser = user;
+        renderAuthState();
+      });
+      return auth;
+    } catch (err) {
+      console.warn('Sign-in unavailable:', err && err.message);
+      return null;
+    }
+  }
+
+  async function signInWithGoogle() {
+    const a = await initAuth();
+    if (!a) return;
+    try {
+      const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      const provider = new authMod.GoogleAuthProvider();
+      await authMod.signInWithPopup(a, provider);
+    } catch (err) {
+      if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+        try {
+          const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+          await authMod.signInWithRedirect(a, new authMod.GoogleAuthProvider());
+        } catch { /* redirect flow — page will reload */ }
+      } else if (err.code !== 'auth/popup-closed-by-user') {
+        console.warn('Sign-in failed:', err && err.message);
+      }
+    }
+  }
+
+  async function signOut() {
+    const a = await initAuth();
+    if (!a) return;
+    try {
+      const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      await authMod.signOut(a);
+    } catch (err) {
+      console.warn('Sign-out failed:', err && err.message);
     }
   }
 
@@ -677,7 +805,12 @@ const mapModule = (() => {
 
     map.on('locationerror', () => { /* geolocation unavailable — map still works */ });
 
-    map.on('click', (e) => openReportPanel(e.latlng));
+    map.on('click', (e) => {
+      // If the report panel is already open, treat a map click as picking
+      // the location. If it is closed, don't force the panel open — the
+      // user opens it deliberately with the "Report a hazard" button.
+      if (nodes.panel.classList.contains('is-open')) openReportPanel(e.latlng);
+    });
 
     map.locate({ watch: true, enableHighAccuracy: true });
   }
@@ -718,6 +851,12 @@ const mapModule = (() => {
       nodes.status.className = 'report-status error';
       return;
     }
+    if (!authUser) {
+      if (nodes.authNotice) nodes.authNotice.hidden = false;
+      nodes.status.textContent = 'Sign in with Google to submit a report.';
+      nodes.status.className = 'report-status error';
+      return;
+    }
 
     nodes.submit.disabled = true;
     nodes.status.textContent = 'Submitting report...';
@@ -733,20 +872,14 @@ const mapModule = (() => {
         lat: selectedLocation.lat,
         lng: selectedLocation.lng,
         createdAt: fsServerTimestamp(),
-        reporterId: playerId,
-        reporterName: playerName
+        reporterId: authUser.uid,
+        reporterName: authUser.displayName || authUser.email || 'Street Sentinel'
       });
       localStorage.setItem('streethazards-report-count', String(getReportCount() + 1));
       renderRewards();
+      closeReportPanel(); // don't leave the user stuck in the form
       nodes.status.textContent = 'Report submitted. Thank you.';
       nodes.status.className = 'report-status success';
-      nodes.form.reset();
-      selectedLocation = null;
-      if (reportMarker && map) {
-        map.removeLayer(reportMarker);
-        reportMarker = null;
-      }
-      nodes.location.textContent = 'No location selected';
     } catch (err) {
       console.warn('Report submit failed:', err && err.message);
       nodes.status.textContent = 'Could not submit the report. Please try again.';
@@ -796,12 +929,33 @@ const mapModule = (() => {
     if (map) setTimeout(() => map.invalidateSize(), 60);
     if (!initialized) {
       initialized = true;
-      nodes.toggle.addEventListener('click', () => openReportPanel());
+      nodes.toggle.addEventListener('click', () => {
+        if (nodes.panel.classList.contains('is-open')) {
+          closeReportPanel();
+        } else {
+          openReportPanel();
+        }
+      });
       nodes.close.addEventListener('click', closeReportPanel);
       nodes.cancel.addEventListener('click', closeReportPanel);
       nodes.form.addEventListener('submit', submitReport);
       nodes.filter.addEventListener('change', applyFilter);
       nodes.locate.addEventListener('click', () => map && map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true }));
+      if (nodes.authBtn) {
+        nodes.authBtn.addEventListener('click', () => {
+          if (authUser) signOut();
+          else signInWithGoogle();
+        });
+      }
+      if (nodes.reportAuthButton) {
+        nodes.reportAuthButton.addEventListener('click', () => signInWithGoogle());
+      }
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && nodes.panel.classList.contains('is-open')) {
+          closeReportPanel();
+        }
+      });
+      initAuth();
       watchHazards();
     }
   }
@@ -871,7 +1025,7 @@ function wireEvents() {
   el.buttons.mapPlay.addEventListener('click', () => {
     playSound('click');
     closeFeedbackCard();
-    if (!state.gameOver && state.timeLeft < GAME_DURATION_SECONDS) {
+    if (state.started && !state.gameOver) {
       showingHowFromGame = true; // reuse the resume path
       startButton.textContent = '▶ Resume Hunt';
     } else {
@@ -880,6 +1034,15 @@ function wireEvents() {
     }
     showView('start');
   });
+
+  const fsMapBtn = document.getElementById('map-fs-btn');
+  const fsGameBtn = document.getElementById('game-fs-btn');
+  if (fsMapBtn) {
+    fsMapBtn.addEventListener('click', () => toggleFullscreen(document.getElementById('map-view')));
+  }
+  if (fsGameBtn) {
+    fsGameBtn.addEventListener('click', () => toggleFullscreen(document.getElementById('game-view')));
+  }
 
   // "Back to Map" from the game intro — nothing to pause, just go home.
   el.buttons.startMap.addEventListener('click', () => {
@@ -914,6 +1077,9 @@ function init() {
   wireEvents();
   renderHud();
   buildMarkers();
+  // Respect a deep link (#game, #results, ...) if one was used; otherwise
+  // the map-first home view is active in the markup.
+  activateView(viewFromHash());
   // Map-first home: the community map is the landing view, so boot it now.
   mapModule.activate();
 }
