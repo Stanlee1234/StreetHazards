@@ -30,8 +30,8 @@
     </div>
   </header>
 
-  <!-- ============ START SCREEN ============ -->
-  <section class="view active" id="start-view">
+  <!-- ============ START SCREEN (game intro — opened from the map CTA) ============ -->
+  <section class="view" id="start-view">
     <div class="eyebrow">Mission 01 · Urban Awareness</div>
     <h2 class="start-title">HAZARDHUNT</h2>
     <p class="start-subtitle">Can you spot what others miss?</p>
@@ -41,6 +41,9 @@
     </p>
     <button class="btn" id="start-hunt-btn" type="button">
       <span class="button-icon" aria-hidden="true">▶</span> Start Hunt
+    </button>
+    <button class="btn ghost" id="start-map-btn" type="button">
+      <span class="button-icon" aria-hidden="true">⌖</span> Back to Map
     </button>
 
     <div class="how-it-works" id="how-it-works">
@@ -127,6 +130,9 @@
         <button class="btn small" id="restart-btn" type="button">
           <span class="button-icon" aria-hidden="true">↻</span> Restart Hunt
         </button>
+        <button class="btn ghost small" id="game-exit-btn" type="button">
+          <span class="button-icon" aria-hidden="true">⌖</span> Exit to Map
+        </button>
       </div>
     </div>
   </section>
@@ -170,8 +176,8 @@
     </div>
   </section>
 
-  <!-- ============ MAP VIEW (community reports) ============ -->
-  <section class="view" id="map-view">
+  <!-- ============ MAP VIEW (community reports) — HOME ============ -->
+  <section class="view active" id="map-view">
     <div class="map-card">
       <div class="map-toolbar">
         <div class="scene-name">
@@ -180,6 +186,7 @@
         </div>
         <div class="map-actions">
           <button class="map-tool" id="locate-me" type="button" title="Center on my location" aria-label="Center on my location">◎</button>
+          <button class="btn" id="map-play-btn" type="button"><span class="button-icon" aria-hidden="true">▶</span> Play HazardHunt</button>
           <button class="report-toggle" id="report-toggle" type="button">
             <span aria-hidden="true">+</span> Report a hazard
           </button>
@@ -210,7 +217,7 @@
           </div>
           <div class="reward-emblem" aria-hidden="true">★</div>
         </div>
-        <div class="reward-score"><strong>0</strong><span>points</span></div>
+        <div class="reward-score"><strong id="report-points">0</strong><span>points</span></div>
         <div class="reward-track"><span id="reward-progress"></span></div>
         <div class="reward-next">
           <span id="reward-badge">First Responder</span>
@@ -275,11 +282,6 @@
       </form>
     </section>
 
-    <div style="text-align:center; margin-top: 22px;">
-      <button class="btn ghost" id="map-back-btn" type="button">
-        <span class="button-icon" aria-hidden="true">←</span> Back to the Hunt
-      </button>
-    </div>
   </section>
 
   <script
