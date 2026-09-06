@@ -1134,6 +1134,26 @@ body {
 
 /* Fullscreen: let the map or game fill the viewport */
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.about-link {
+  color: var(--ink-dim);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.about-link:hover {
+  color: var(--ink);
+}
+
 #map-view:fullscreen,
 #game-view:fullscreen {
   width: 100vw;
