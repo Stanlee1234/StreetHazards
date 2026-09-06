@@ -54,7 +54,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import {
-      getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged
+      getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+      getRedirectResult, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import {
       getFirestore, collection, addDoc, deleteDoc, doc,
@@ -125,20 +126,38 @@
       statusEl.className = "status" + (cls ? " " + cls : "");
     }
 
+    getRedirectResult(auth).catch(() => {});
+
+    async function trySignIn() {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        // Popup blocked (embedded browsers, strict settings): fall back to
+        // the full-page redirect flow, which lands back on this page signed in.
+        if (err.code === "auth/popup-blocked" || err.code === "auth/cancelled-popup-request") {
+          setStatus("Popup blocked — redirecting to sign in…", "");
+          try {
+            await signInWithRedirect(auth, provider);
+          } catch {
+            setStatus("Could not start sign-in. Check that this domain is authorized in Firebase console.", "err");
+          }
+        } else if (err.code !== "auth/popup-closed-by-user") {
+          setStatus(`Sign-in failed: ${err.message}`, "err");
+        }
+      }
+    }
+
     onAuthStateChanged(auth, (user) => {
       if (user) {
         setStatus(`Signed in as ${user.displayName || user.email}. Ready to seed.`, "ok");
         populateBtn.disabled = false;
         clearBtn.disabled = false;
       } else {
-        setStatus("Signed out — click the Sign in button that the browser shows.", "");
+        setStatus("Signed out — starting sign-in…", "");
         populateBtn.disabled = true;
         clearBtn.disabled = true;
-        signInWithPopup(auth, new GoogleAuthProvider()).catch((err) => {
-          if (err.code !== "auth/popup-closed-by-user") {
-            setStatus(`Sign-in failed: ${err.message}`, "err");
-          }
-        });
+        trySignIn();
       }
     });
 
