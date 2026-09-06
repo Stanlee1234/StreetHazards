@@ -607,6 +607,15 @@ const mapModule = (() => {
   let myReports = []; // hazards reported by the current identity
   let portfolioUnsub = null;
 
+  // Voting: "not there anymore" tallies. A hazard is marked resolved once
+  // notThereVotes reaches votesRequired + activeVotes, then it disappears.
+  const VOTES_REQUIRED_BASE = 3;
+  const MAX_MARKER_RADIUS = 24;
+  let votedHazards = new Set();
+  let userLocation = null;
+  let hazards = [];
+  const hazardMarkers = new Map();
+
   const nodes = {
     panel: document.getElementById('report-panel'),
     form: document.getElementById('report-form'),
@@ -719,17 +728,58 @@ const mapModule = (() => {
     });
   }
 
+  function votesRequiredFor(hazard) {
+    return VOTES_REQUIRED_BASE + (hazard.activeVotes || 0);
+  }
+
+  function formatDistance(meters) {
+    return meters < 1000 ? `${Math.round(meters)} m away` : `${(meters / 1000).toFixed(1)} km away`;
+  }
+
+  function distanceInMeters(first, second) {
+    const R = 6371000;
+    const dLat = ((second.lat - first.lat) * Math.PI) / 180;
+    const dLng = ((second.lng - first.lng) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos((first.lat * Math.PI) / 180) * Math.cos((second.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function votedStorageKey() {
+    const id = authUser ? authUser.uid : guestId;
+    return `streetHazards:voted:${id}`;
+  }
+
+  function loadVotedHazards() {
+    try {
+      votedHazards = new Set(JSON.parse(localStorage.getItem(votedStorageKey()) || '[]'));
+    } catch {
+      votedHazards = new Set();
+    }
+  }
+
   function addHazardMarker(data) {
+    const activeVoteCount = data.activeVotes || 0;
     const layer = L.circleMarker([data.lat, data.lng], {
-      radius: 8,
+      radius: Math.min(8 + activeVoteCount * 2, MAX_MARKER_RADIUS),
       fillColor: '#ef4444',
       color: '#991b1b',
       weight: 2,
       fillOpacity: 0.8
-    }).bindPopup(`<b>Hazard:</b> ${data.type}${data.details ? `<br>${data.details}` : ''}`);
+    }).bindPopup(
+      `<b>Hazard:</b> ${data.type}${data.details ? `<br>${data.details}` : ''}` +
+      `<br>${formatPostedTime(data.createdAt)}` +
+      `<br><b>${activeVoteCount} active agreement${activeVoteCount === 1 ? '' : 's'}</b>` +
+      `<br><a class="hazard-google-maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${data.lat},${data.lng}`)}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>`
+    );
     hazardLayers.push({ layer, type: data.type });
     layer.addTo(map);
     applyFilter();
+  }
+
+  function formatPostedTime(ts) {
+    if (!ts || !ts.toDate) return 'just now';
+    return ts.toDate().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
   }
 
   const FIREBASE_CONFIG = {
@@ -809,6 +859,8 @@ const mapModule = (() => {
       authMod.onAuthStateChanged(auth, async (user) => {
         authUser = user;
         renderAuthState();
+        loadVotedHazards();
+        renderNearby();
         if (user) {
           await mergeGuestPoints();
           subscribeToUserDoc(user.uid);
@@ -891,6 +943,8 @@ const mapModule = (() => {
 
     map.on('locationfound', (e) => {
       const radius = e.accuracy;
+      userLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+      renderNearby();
       if (!userMarker) {
         userMarker = L.marker(e.latlng, { icon: gpsIcon }).addTo(map);
         accuracyCircle = L.circle(e.latlng, {
@@ -969,12 +1023,21 @@ const mapModule = (() => {
       const firestore = await initFirebase();
       if (!firestore) throw new Error('offline');
 
+      const typeSelect = document.getElementById('hazard-type');
+      const customInput = document.getElementById('custom-hazard-type');
+      const selectedType = typeSelect.value === 'Other' && customInput
+        ? customInput.value.trim()
+        : typeSelect.value;
+
       await fsAddDoc(firestore, {
-        type: document.getElementById('hazard-type').value,
+        type: selectedType || 'Other hazard',
         details: document.getElementById('hazard-details').value.trim(),
         lat: selectedLocation.lat,
         lng: selectedLocation.lng,
         createdAt: await fsServerTimestamp(),
+        activeVotes: 1,
+        notThereVotes: 0,
+        resolved: false,
         reporterId: identity.id,
         reporterName: identity.name
       });
@@ -1110,6 +1173,101 @@ const mapModule = (() => {
     }
   }
 
+  async function voteHazardGone(hazardId, button) {
+    if (votedHazards.has(hazardId)) return;
+    button.disabled = true;
+    button.textContent = 'Saving vote…';
+    try {
+      const firestore = await initFirebase();
+      if (!firestore) throw new Error('offline');
+      const mod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+      const ref = mod.doc(firestore, 'hazards', hazardId);
+      await mod.runTransaction(firestore, async (tx) => {
+        const snap = await tx.get(ref);
+        if (!snap.exists() || snap.data().resolved) return;
+        const data = snap.data();
+        const next = (data.notThereVotes || 0) + 1;
+        tx.update(ref, { notThereVotes: next, resolved: next >= votesRequiredFor(data) });
+      });
+      votedHazards.add(hazardId);
+      localStorage.setItem(votedStorageKey(), JSON.stringify([...votedHazards]));
+    } catch (err) {
+      console.warn('Vote failed:', err && err.message);
+    }
+    renderNearby();
+  }
+
+  function renderNearby() {
+    const list = document.getElementById('hazard-list');
+    const statusEl = document.getElementById('nearby-status');
+    const countEl = document.getElementById('nearby-count');
+    if (!list) return;
+    const sorted = hazards
+      .map((h) => ({ ...h, distance: userLocation ? distanceInMeters(userLocation, h) : null }))
+      .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity))
+      .slice(0, 12);
+    if (countEl) countEl.textContent = `${hazards.length} hazard${hazards.length === 1 ? '' : 's'}`;
+    if (!sorted.length) {
+      list.innerHTML = '<div class="leaderboard-empty">No hazards reported nearby yet.</div>';
+      return;
+    }
+    list.innerHTML = sorted.map((h) => {
+      const active = h.activeVotes || 0;
+      const votes = h.notThereVotes || 0;
+      const required = votesRequiredFor(h);
+      const voted = votedHazards.has(h.id);
+      return `
+      <div class="hazard-item">
+        <div class="hazard-item-header">
+          <strong>${h.type || 'Hazard'}</strong>
+          <span class="hazard-distance">${h.distance === null ? 'distance unavailable' : formatDistance(h.distance)}</span>
+        </div>
+        ${h.details ? `<div class="hazard-details">${h.details}</div>` : ''}
+        <div class="hazard-meta">
+          <span>${active} active agreement${active === 1 ? '' : 's'} · ${formatTimeAgo(h.createdAt)}</span>
+          <button class="hazard-vote" type="button" ${voted ? 'disabled' : ''} data-id="${h.id}">
+            ${voted ? `You voted (${votes}/${required})` : `Vote: gone (${votes}/${required})`}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.hazard-vote').forEach((btn) => {
+      btn.addEventListener('click', () => voteHazardGone(btn.dataset.id, btn));
+    });
+  }
+
+  async function searchPlaces(query) {
+    const resultsEl = document.getElementById('place-search-results');
+    if (!resultsEl) return;
+    resultsEl.innerHTML = '<div class="place-search-message">Searching…</div>';
+    try {
+      const params = new URLSearchParams({ q: query, format: 'jsonv2', limit: '5', addressdetails: '1' });
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
+      if (!res.ok) throw new Error('search failed');
+      const results = await res.json();
+      if (!results.length) {
+        resultsEl.innerHTML = '<div class="place-search-message">No places found.</div>';
+        return;
+      }
+      resultsEl.innerHTML = '';
+      results.forEach((r) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'place-search-result';
+        btn.textContent = r.display_name;
+        btn.addEventListener('click', () => {
+          map.setView([Number(r.lat), Number(r.lon)], 17);
+          L.marker([Number(r.lat), Number(r.lon)]).addTo(map).bindPopup(r.display_name).openPopup();
+          resultsEl.innerHTML = '';
+        });
+        resultsEl.appendChild(btn);
+      });
+    } catch (err) {
+      console.warn('Place search failed:', err && err.message);
+      resultsEl.innerHTML = '<div class="place-search-message">Search unavailable right now.</div>';
+    }
+  }
+
   async function watchHazards() {
     const firestore = await initFirebase();
     if (!firestore) return;
@@ -1118,20 +1276,26 @@ const mapModule = (() => {
       mod.onSnapshot(mod.collection(firestore, 'hazards'), (snapshot) => {
         leaderboard = {};
         myReports = [];
+        hazards = [];
         const myId = authUser ? authUser.uid : guestId;
         snapshot.docs.forEach((doc) => {
           const data = doc.data();
+          if (data.resolved) return; // voted gone — hide it
           const id = data.reporterId || 'anonymous';
-          if (id === myId) myReports.push({ id: doc.id, ...data });
+          const record = { id: doc.id, ...data };
+          hazards.push(record);
+          if (id === myId) myReports.push(record);
           leaderboard[id] = leaderboard[id] || { id, name: data.reporterName || 'Anonymous sentinel', reports: 0 };
           leaderboard[id].reports += 1;
         });
         myReports.sort((a, b) => (b.createdAt ? b.createdAt.seconds || 0 : 0) - (a.createdAt ? a.createdAt.seconds || 0 : 0));
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added' && map) addHazardMarker(change.doc.data());
-        });
+        // Rebuild markers from the fresh list (resolved ones drop off).
+        hazardLayers.forEach(({ layer }) => map && map.removeLayer(layer));
+        hazardLayers = [];
+        hazards.forEach((h) => addHazardMarker(h));
         renderLeaderboard();
         renderPortfolio();
+        renderNearby();
       });
     } catch (err) {
       console.warn('Live hazard feed unavailable:', err && err.message);
@@ -1142,6 +1306,8 @@ const mapModule = (() => {
     ensureMap();
     renderRewards();
     renderLeaderboard();
+    loadVotedHazards();
+    renderNearby();
     if (map) setTimeout(() => map.invalidateSize(), 60);
     if (!initialized) {
       initialized = true;
@@ -1159,6 +1325,33 @@ const mapModule = (() => {
       const seedBtn = document.getElementById('seed-demo-btn');
       if (seedBtn) seedBtn.addEventListener('click', seedDemoData);
       nodes.locate.addEventListener('click', () => map && map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true }));
+
+      // Place search (Nominatim).
+      const placeSearch = document.getElementById('place-search');
+      const placeSearchInput = document.getElementById('place-search-input');
+      if (placeSearch && placeSearchInput) {
+        placeSearch.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const q = placeSearchInput.value.trim();
+          if (q) searchPlaces(q);
+        });
+      }
+      document.addEventListener('click', (e) => {
+        const results = document.getElementById('place-search-results');
+        if (results && !e.target.closest('#place-search')) results.innerHTML = '';
+      });
+
+      // Custom hazard type: "Other" reveals the free-text field.
+      const typeSelect = document.getElementById('hazard-type');
+      const customField = document.getElementById('custom-hazard-field');
+      const customInput = document.getElementById('custom-hazard-type');
+      if (typeSelect && customField && customInput) {
+        typeSelect.addEventListener('change', () => {
+          const isCustom = typeSelect.value === 'Other';
+          customField.hidden = !isCustom;
+          customInput.required = isCustom;
+        });
+      }
       if (nodes.authBtn) {
         nodes.authBtn.addEventListener('click', () => {
           if (authUser) signOut();

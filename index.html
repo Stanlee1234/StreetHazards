@@ -212,6 +212,12 @@
         <span class="seed-status" id="seed-demo-status" aria-live="polite"></span>
         <span class="live-indicator"><span class="status-dot"></span> Live feed</span>
       </div>
+      <form class="place-search" id="place-search" role="search">
+        <label class="sr-only" for="place-search-input">Search for a restaurant or landmark</label>
+        <input id="place-search-input" type="search" placeholder="Search restaurants and landmarks" autocomplete="off" />
+        <button type="submit" aria-label="Search"><span class="search-icon" aria-hidden="true">⌕</span></button>
+        <div class="place-search-results" id="place-search-results" role="listbox" aria-live="polite"></div>
+      </form>
       <div id="map"></div>
     </div>
 
@@ -248,6 +254,20 @@
         </div>
         <div class="leaderboard-list" id="leaderboard-list">
           <div class="leaderboard-empty">Be the first sentinel on the board.</div>
+        </div>
+      </section>
+
+      <section class="nearby-panel" aria-labelledby="nearby-title">
+        <div class="panel-heading-row">
+          <div>
+            <div class="panel-kicker"><span aria-hidden="true">⌖</span> Nearest to you</div>
+            <h2 id="nearby-title">Nearby hazards</h2>
+          </div>
+          <span class="nearby-count" id="nearby-count">0 hazards</span>
+        </div>
+        <p class="nearby-status" id="nearby-status">Enable location to sort by distance.</p>
+        <div class="hazard-list" id="hazard-list" aria-live="polite">
+          <div class="leaderboard-empty">No hazards reported nearby yet.</div>
         </div>
       </section>
 
