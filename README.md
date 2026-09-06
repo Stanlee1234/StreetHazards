@@ -25,7 +25,7 @@ The repo now contains two separate experiences that coexist on the same page:
 - Includes a **Nominatim place search** bar (OpenStreetMap, no API key) to jump to restaurants/landmarks.
 - Has a **collapsible closest-hazards sidebar**, an auth-gated report form, and a mobile-friendly layout.
 
-Backend: **Firebase** (Hosting + Firestore + Auth/Google). All logic runs in the browser via `script.js`; no custom server.
+Backend: **Firebase** (Hosting + Firestore + Auth/Google). All logic runs in the browser via `js/game.js`; no custom server.
 
 ### HazardHunt game
 
@@ -59,12 +59,12 @@ Relevant files:
 - `.firebaserc` — sets the default Firebase project to `streethazards-2a` for CLI commands.
 - `firestore.rules` — Firestore security rules. Currently scoped to `match /hazards/{hazardId}` with `allow read: if true` and `allow create, update: if request.auth != null && request.time < timestamp.date(2026, 10, 5)`.
 - `firestore.indexes.json` — Firestore index config (currently empty; add indexes here if queries need them).
-- `script.js` — contains the Firebase app config (apiKey, authDomain, projectId, etc.) used to initialize Firebase, Auth, and Firestore in the browser.
+- `js/game.js` — contains the Firebase app config (apiKey, authDomain, projectId, etc.) used to initialize Firebase, Auth, and Firestore in the browser.
 
 If you want to run your own copy against a different Firebase project, you would:
 
 1. Create your own Firebase project and enable Hosting, Firestore, and Google Auth.
-2. Replace the `firebaseConfig` object in `script.js` with your project's web app config.
+2. Replace the `FIREBASE_CONFIG` object in `js/game.js` with your project's web app config.
 3. Update `.firebaserc` to point at your project (or use `firebase use`).
 4. Deploy with `firebase deploy --only hosting,firestore`.
 
@@ -101,8 +101,6 @@ StreetHazards/
 │   └── game.css               # styles for the whole HazardHunt experience + shared UI
 ├── js/
 │   └── game.js                # HazardHunt game state + logic (score, timer, hazards, sounds, map integration)
-├── script.js                  # community-map logic (Firebase map, auth, reporting, voting, sidebar, search)
-├── styles.css                 # styles for the community-map UI (sidebar, hazard list, report panel, auth)
 ├── art/
 │   └── unsafe-city.png        # illustrated game artwork
 ├── sounds/
@@ -121,6 +119,6 @@ StreetHazards/
 ## Development notes
 
 - The page is a single-page app — views are shown/hidden with CSS rather than separate routes.
-- The community-map code lives in `script.js` and `styles.css`; the game code lives in `js/game.js` and `css/game.css`. `index.html` pulls in both so both experiences are available on the same page.
-- The Firebase SDKs (app, auth, firestore, analytics) are loaded from CDN in `script.js`; Leaflet CSS/JS are loaded from CDN in `index.html`.
+- The community map and the game both live in `js/game.js` (a single map module owns the Leaflet map, voting, reporting, place search, rewards, and portfolio) with styles in `css/game.css`. `index.html` pulls in that one script.
+- The Firebase SDKs (app, auth, firestore, analytics) and Leaflet are loaded from CDN; no build step or bundler needed.
 - Sound playback depends on browser autoplay policies; the game guards audio calls so a blocked playback doesn't crash the game.
