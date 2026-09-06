@@ -56,7 +56,11 @@ body {
 
 .view.active {
   display: block;
-  animation: view-in 0.45s ease both;
+  /* Use `backwards` fill so the entrance transform is released when the
+     animation ends — a lingering transform would make `position: fixed`
+     children (the hazards sidebar) anchor to this view instead of the
+     viewport. */
+  animation: view-in 0.45s ease backwards;
 }
 
 @keyframes view-in {
@@ -1246,33 +1250,38 @@ body {
 /* ---------- Map layout: left sidebar + map column ---------- */
 
 .map-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  display: block;
 }
 
 .map-column {
-  flex: 1;
   min-width: 0;
+  margin-left: 314px; /* 300px sidebar + 14px gap */
+  transition: margin-left 160ms ease;
 }
 
-/* Light-theme sidebar — restored from Stanley's original map design. */
+.map-layout:has(.hazards-sidebar.is-minimized) .map-column {
+  margin-left: 70px; /* 56px minimized sidebar + 14px gap */
+}
+
+/* Light-theme sidebar — restored from Stanley's original map design.
+   Fixed to the left edge so it floats over the map instead of pushing
+   it down; the map column offsets itself with a left margin. */
 
 .hazards-sidebar {
-  position: sticky;
-  top: 14px;
+  position: fixed;
+  top: 70px; /* below the app header */
+  bottom: 0;
+  left: 0;
   z-index: 900;
-  flex: 0 0 300px;
   width: 300px;
   box-sizing: border-box;
-  max-height: calc(100vh - 28px);
   overflow-y: auto;
   padding: 24px 18px;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--radius);
+  border: 0;
+  border-right: 1px solid #cbd5e1;
   background: #f8fafc;
   color: #172033;
-  transition: flex-basis 160ms ease, width 160ms ease, padding 160ms ease;
+  transition: width 160ms ease, padding 160ms ease;
 }
 
 .hazards-sidebar-header {
@@ -1325,7 +1334,6 @@ body {
 }
 
 .hazards-sidebar.is-minimized {
-  flex-basis: 56px;
   width: 56px;
   padding: 14px 10px;
 }
@@ -1455,6 +1463,10 @@ body {
 
 #map-view:fullscreen .hazards-sidebar {
   display: none;
+}
+
+#map-view:fullscreen .map-column {
+  margin-left: 0;
 }
 
 #map-view:fullscreen .map-card {
@@ -1715,21 +1727,31 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .map-layout {
-    flex-direction: column;
+  .map-column {
+    margin-left: 0;
   }
 
+  /* On tight screens the sidebar becomes a floating bottom sheet
+     over the map (Stanley's original mobile layout) instead of
+     stacking above it and pushing the map down. */
   .hazards-sidebar {
-    position: static;
-    flex-basis: auto;
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
     width: 100%;
-    max-height: 340px;
+    max-height: 42vh;
+    padding: 14px 16px;
+    border-top: 1px solid #cbd5e1;
+    border-right: 0;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -6px 24px rgba(15, 23, 42, 0.18);
   }
 
   .hazards-sidebar.is-minimized {
-    flex-basis: auto;
     width: 100%;
-    max-height: none;
+    max-height: 56px;
     padding: 14px;
   }
 
