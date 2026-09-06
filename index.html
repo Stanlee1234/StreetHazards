@@ -230,13 +230,15 @@
         <span class="seed-status" id="seed-demo-status" aria-live="polite"></span>
         <span class="live-indicator"><span class="status-dot"></span> Live feed</span>
       </div>
-      <form class="place-search" id="place-search" role="search">
-        <label class="sr-only" for="place-search-input">Search for a restaurant or landmark</label>
-        <input id="place-search-input" type="search" placeholder="Search restaurants and landmarks" autocomplete="off" />
-        <button type="submit" aria-label="Search"><span class="search-icon" aria-hidden="true">⌕</span></button>
-        <div class="place-search-results" id="place-search-results" role="listbox" aria-live="polite"></div>
-      </form>
-      <div id="map"></div>
+      <div class="map-stage">
+        <form class="place-search" id="place-search" role="search">
+          <label class="sr-only" for="place-search-input">Search for a restaurant or landmark</label>
+          <input id="place-search-input" type="search" placeholder="Search restaurants and landmarks" autocomplete="off" />
+          <button type="submit" aria-label="Search"><span class="search-icon" aria-hidden="true">⌕</span></button>
+          <div class="place-search-results" id="place-search-results" role="listbox" aria-live="polite"></div>
+        </form>
+        <div id="map"></div>
+      </div>
     </div>
 
     <div class="community-grid">

@@ -1132,11 +1132,18 @@ body {
   text-align: center;
 }
 
-#map {
+.map-stage {
+  position: relative;
   flex: 1;
-  width: 100%;
   min-height: 0;
-  background: #0a0f15;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: #e8ecf0;
 }
 
 /* Fullscreen: let the map or game fill the viewport */
@@ -1155,76 +1162,84 @@ body {
 
 .place-search {
   position: absolute;
-  top: 122px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 500;
+  z-index: 1000;
   display: flex;
   align-items: center;
-  width: min(440px, calc(100% - 40px));
-  background: rgba(16, 26, 38, 0.92);
-  border: 1px solid var(--panel-edge);
-  border-radius: 10px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(6px);
+  width: min(540px, calc(100% - 40px));
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 3px 14px rgba(15, 23, 42, 0.24);
 }
 
 .place-search input {
   flex: 1;
   min-width: 0;
+  border: 0;
+  border-radius: 8px 0 0 8px;
   padding: 12px 14px;
   background: transparent;
-  border: 0;
-  color: var(--ink);
-  font: 500 14px/1 var(--font);
-  outline: none;
+  color: #172033;
+  font: 14px/1.2 var(--font);
+  outline: 0;
 }
 
-.place-search button {
+.place-search > button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  min-height: 44px;
   border: 0;
-  background: transparent;
-  color: var(--ink-dim);
-  padding: 0 14px;
-  font-size: 18px;
+  border-radius: 0 8px 8px 0;
+  padding: 0;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 16px;
   cursor: pointer;
+}
+
+.place-search > button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .place-search-results {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
   display: grid;
-  gap: 4px;
-  padding: 6px;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 0 0 10px 10px;
-  box-shadow: var(--shadow);
-  max-height: 260px;
+  gap: 2px;
+  max-height: 280px;
   overflow-y: auto;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.2);
 }
 
 .place-search-result,
 .place-search-message {
   text-align: left;
-  padding: 9px 11px;
+  padding: 10px 12px;
   border-radius: 6px;
   background: transparent;
   border: 0;
-  color: var(--ink);
-  font-size: 12px;
+  color: #172033;
+  font-size: 13px;
   cursor: pointer;
 }
 
 .place-search-result:hover,
 .place-search-result:focus-visible {
-  background: rgba(255, 255, 255, 0.06);
+  background: #eff6ff;
   outline: none;
 }
 
 .place-search-message {
-  color: var(--ink-faint);
+  color: #64748b;
   cursor: default;
 }
 
@@ -1241,6 +1256,8 @@ body {
   min-width: 0;
 }
 
+/* Light-theme sidebar — restored from Stanley's original map design. */
+
 .hazards-sidebar {
   position: sticky;
   top: 14px;
@@ -1250,10 +1267,11 @@ body {
   box-sizing: border-box;
   max-height: calc(100vh - 28px);
   overflow-y: auto;
-  padding: 18px;
-  border: 1px solid var(--panel-edge);
+  padding: 24px 18px;
+  border: 1px solid #cbd5e1;
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(17, 28, 40, 0.96), rgba(12, 20, 29, 0.96));
+  background: #f8fafc;
+  color: #172033;
   transition: flex-basis 160ms ease, width 160ms ease, padding 160ms ease;
 }
 
@@ -1266,24 +1284,35 @@ body {
 
 .hazards-sidebar h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: 20px;
+  color: #172033;
+}
+
+.hazards-sidebar .panel-kicker {
+  color: #64748b;
 }
 
 .nearby-count {
   display: block;
   margin-top: 3px;
-  color: var(--ink-faint);
+  color: #64748b;
   font-size: 11px;
+}
+
+.hazards-sidebar .nearby-status {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
 }
 
 .hazards-sidebar-toggle {
   flex: 0 0 auto;
   width: 28px;
   height: 28px;
-  border: 1px solid var(--panel-edge);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--blue);
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #334155;
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
@@ -1291,8 +1320,8 @@ body {
 }
 
 .hazards-sidebar-toggle:hover {
-  background: var(--blue);
-  color: var(--bg-0);
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .hazards-sidebar.is-minimized {
@@ -1318,18 +1347,24 @@ body {
 
 .hazard-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-top: 10px;
 }
 
 .hazard-item {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
-  border: 1px solid var(--panel-edge);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #ef4444;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.hazard-item:hover {
+  border-color: #94a3b8;
 }
 
 .hazard-item-header {
@@ -1344,14 +1379,15 @@ body {
 }
 
 .hazard-distance {
-  font-size: 11px;
-  color: var(--ink-faint);
+  font-size: 12px;
+  color: #b91c1c;
   white-space: nowrap;
+  font-weight: 700;
 }
 
 .hazard-details {
   font-size: 12px;
-  color: var(--ink-dim);
+  color: #64748b;
 }
 
 .hazard-meta {
@@ -1360,26 +1396,26 @@ body {
   justify-content: space-between;
   gap: 8px;
   font-size: 11px;
-  color: var(--ink-faint);
+  color: #94a3b8;
 }
 
 .hazard-vote {
   border: 0;
-  border-radius: 999px;
-  padding: 7px 12px;
-  background: rgba(224, 57, 44, 0.12);
-  color: #ff8d94;
-  font: 700 11px/1 var(--font);
+  border-radius: 4px;
+  padding: 7px 8px;
+  background: #fee2e2;
+  color: #991b1b;
+  font: 700 12px/1.2 var(--font);
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .hazard-vote:hover:not(:disabled) {
-  background: rgba(224, 57, 44, 0.25);
+  background: #fecaca;
 }
 
 .hazard-vote:disabled {
-  opacity: 0.55;
+  opacity: 0.65;
   cursor: default;
 }
 
@@ -1501,11 +1537,21 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0 14px;
+  padding: 0 16px;
   font-size: 13px;
   font-weight: 700;
-  border-radius: var(--radius-sm);
+  border-radius: 7px;
   white-space: nowrap;
+  border: 0;
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
+
+#map-auth-btn.map-tool:hover {
+  transform: translateY(-2px);
+  background: #1d4ed8;
+  color: #ffffff;
 }
 
 .report-header {
