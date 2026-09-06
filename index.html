@@ -40,7 +40,9 @@
       Explore the city scene, identify hidden safety hazards, and learn why
       each one matters. You have three minutes — trust your eyes.
     </p>
-    <button class="btn" id="start-hunt-btn" type="button"><span class="button-icon" aria-hidden="true">▶</span> Start Hunt</button>
+    <button class="btn" id="start-hunt-btn" type="button">
+      <span class="button-icon" aria-hidden="true">▶</span> Start Hunt
+    </button>
 
     <div class="how-it-works" id="how-it-works">
       <div class="how-card">
@@ -84,7 +86,7 @@
       </div>
       <div class="stat">
         <div class="stat-label">Total</div>
-        <div class="stat-value" id="hud-total">15</div>
+        <div class="stat-value" id="hud-total">19</div>
       </div>
       <div class="stat">
         <div class="stat-label">Accuracy</div>
@@ -120,8 +122,12 @@
         <div class="progress-status" id="progress-status"></div>
       </div>
       <div class="progress-actions">
-        <button class="btn ghost small" id="how-btn" type="button"><span class="button-icon" aria-hidden="true">?</span> How It Works</button>
-        <button class="btn small" id="restart-btn" type="button"><span class="button-icon" aria-hidden="true">↻</span> Restart Hunt</button>
+        <button class="btn ghost small" id="how-btn" type="button">
+          <span class="button-icon" aria-hidden="true">?</span> How It Works
+        </button>
+        <button class="btn small" id="restart-btn" type="button">
+          <span class="button-icon" aria-hidden="true">↻</span> Restart Hunt
+        </button>
       </div>
     </div>
   </section>
@@ -156,8 +162,12 @@
     </div>
 
     <div class="results-actions">
-      <button class="btn" id="play-again-btn" type="button"><span class="button-icon" aria-hidden="true">↻</span> Play Again</button>
-      <button class="btn ghost" id="results-map-btn" type="button"><span class="button-icon" aria-hidden="true">⌖</span> Community Map</button>
+      <button class="btn" id="play-again-btn" type="button">
+        <span class="button-icon" aria-hidden="true">↻</span> Play Again
+      </button>
+      <button class="btn ghost" id="results-map-btn" type="button">
+        <span class="button-icon" aria-hidden="true">⌖</span> Community Map
+      </button>
     </div>
   </section>
 
@@ -165,10 +175,15 @@
   <section class="view" id="map-view">
     <div class="map-card">
       <div class="map-toolbar">
-        <div class="scene-name"><span class="section-icon" aria-hidden="true">⌖</span> Community Hazard Map <span>/ live reports</span></div>
+        <div class="scene-name">
+          <span class="section-icon" aria-hidden="true">⌖</span> Community Hazard Map
+          <span>/ live reports</span>
+        </div>
         <div class="map-actions">
           <button class="map-tool" id="locate-me" type="button" title="Center on my location" aria-label="Center on my location">◎</button>
-          <button class="report-toggle" id="report-toggle" type="button"><span aria-hidden="true">+</span> Report a hazard</button>
+          <button class="report-toggle" id="report-toggle" type="button">
+            <span aria-hidden="true">+</span> Report a hazard
+          </button>
         </div>
       </div>
       <div class="map-filters" aria-label="Map filters">
@@ -196,9 +211,12 @@
           </div>
           <div class="reward-emblem" aria-hidden="true">★</div>
         </div>
-        <div class="reward-score"><strong id="report-points">0</strong><span>points</span></div>
+        <div class="reward-score"><strong>0</strong><span>points</span></div>
         <div class="reward-track"><span id="reward-progress"></span></div>
-        <div class="reward-next"><span id="reward-badge">First Responder</span><span id="reward-next-text">1 report to unlock</span></div>
+        <div class="reward-next">
+          <span id="reward-badge">First Responder</span>
+          <span id="reward-next-text">1 report to unlock</span>
+        </div>
         <div class="badge-row" id="badge-row" aria-label="Unlocked rewards">
           <span class="badge locked" data-badge="first"><span aria-hidden="true">♢</span> First report</span>
           <span class="badge locked" data-badge="watch"><span aria-hidden="true">◉</span> Street watcher</span>
@@ -220,7 +238,8 @@
       </section>
     </div>
 
-    <section class="report-panel" id="report-panel" aria-labelledby="report-title">
+    <!-- ============ REPORT PANEL (report-a-hazard form) ============ -->
+    <section class="report-panel" id="report-panel" aria-labelledby="report-title" hidden>
       <div class="report-header">
         <div>
           <h2 id="report-title">Report a hazard</h2>
@@ -234,23 +253,28 @@
         <select id="hazard-type" required>
           <option value="">Select a hazard</option>
           <option value="Pothole">Pothole</option>
-          <option value="Flood">Flood</option>
+          <option value="Crash">Crash</option>
           <option value="Road block">Road block</option>
-          <option value="Broken streetlight">Broken streetlight</option>
           <option value="Other">Other</option>
         </select>
+        <div class="custom-hazard-field" id="custom-hazard-field" hidden>
+          <label for="custom-hazard-type">Custom hazard</label>
+          <input id="custom-hazard-type" type="text" maxlength="80" placeholder="Describe the hazard" />
+        </div>
         <label for="hazard-details">Details <span>(optional)</span></label>
         <textarea id="hazard-details" maxlength="300" placeholder="Add useful details about this hazard"></textarea>
         <div class="report-actions">
           <button class="report-cancel" id="report-cancel" type="button">Cancel</button>
-          <button class="report-submit" id="report-submit" type="submit"><span aria-hidden="true">✓</span> Submit report</button>
+          <button class="report-submit" id="report-submit" type="submit">Submit report</button>
         </div>
         <p class="report-status" id="report-status" role="status"></p>
       </form>
     </section>
 
     <div style="text-align:center; margin-top: 22px;">
-      <button class="btn ghost" id="map-back-btn" type="button"><span class="button-icon" aria-hidden="true">←</span> Back to the Hunt</button>
+      <button class="btn ghost" id="map-back-btn" type="button">
+        <span class="button-icon" aria-hidden="true">←</span> Back to the Hunt
+      </button>
     </div>
   </section>
 
