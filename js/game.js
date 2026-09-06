@@ -1326,6 +1326,24 @@ const mapModule = (() => {
       if (seedBtn) seedBtn.addEventListener('click', seedDemoData);
       nodes.locate.addEventListener('click', () => map && map.locate({ setView: true, maxZoom: 16, enableHighAccuracy: true }));
 
+      // Hazards sidebar minimize/expand toggle.
+      const sidebar = document.getElementById('hazards-sidebar');
+      const sidebarToggle = document.getElementById('hazards-sidebar-toggle');
+      if (sidebar && sidebarToggle) {
+        if (localStorage.getItem('hazards-sidebar-minimized') === '1') {
+          sidebar.classList.add('is-minimized');
+          sidebarToggle.setAttribute('aria-expanded', 'false');
+          sidebarToggle.setAttribute('aria-label', 'Expand hazards sidebar');
+        }
+        sidebarToggle.addEventListener('click', () => {
+          const minimized = sidebar.classList.toggle('is-minimized');
+          localStorage.setItem('hazards-sidebar-minimized', minimized ? '1' : '0');
+          sidebarToggle.setAttribute('aria-expanded', String(!minimized));
+          sidebarToggle.setAttribute('aria-label', minimized ? 'Expand hazards sidebar' : 'Minimize hazards sidebar');
+          if (map) setTimeout(() => map.invalidateSize(), 200);
+        });
+      }
+
       // Place search (Nominatim).
       const placeSearch = document.getElementById('place-search');
       const placeSearchInput = document.getElementById('place-search-input');

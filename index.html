@@ -182,6 +182,24 @@
 
   <!-- ============ MAP VIEW (community reports) — HOME ============ -->
   <section class="view active" id="map-view">
+    <div class="map-layout">
+      <!-- Left sidebar: closest hazards + voting (Stanley's original layout) -->
+      <aside class="hazards-sidebar" id="hazards-sidebar" aria-labelledby="nearby-title">
+        <div class="hazards-sidebar-header">
+          <div>
+            <div class="panel-kicker"><span aria-hidden="true">⌖</span> Nearest to you</div>
+            <h2 id="nearby-title">Nearby hazards</h2>
+            <span class="nearby-count" id="nearby-count">0 hazards</span>
+          </div>
+          <button class="hazards-sidebar-toggle" id="hazards-sidebar-toggle" type="button" aria-label="Minimize hazards sidebar" aria-expanded="true">&lsaquo;</button>
+        </div>
+        <p class="nearby-status" id="nearby-status">Enable location to sort by distance.</p>
+        <div class="hazard-list" id="hazard-list" aria-live="polite">
+          <div class="leaderboard-empty">No hazards reported nearby yet.</div>
+        </div>
+      </aside>
+
+      <div class="map-column">
     <div class="map-card">
       <div class="map-toolbar">
         <div class="scene-name">
@@ -257,20 +275,6 @@
         </div>
       </section>
 
-      <section class="nearby-panel" aria-labelledby="nearby-title">
-        <div class="panel-heading-row">
-          <div>
-            <div class="panel-kicker"><span aria-hidden="true">⌖</span> Nearest to you</div>
-            <h2 id="nearby-title">Nearby hazards</h2>
-          </div>
-          <span class="nearby-count" id="nearby-count">0 hazards</span>
-        </div>
-        <p class="nearby-status" id="nearby-status">Enable location to sort by distance.</p>
-        <div class="hazard-list" id="hazard-list" aria-live="polite">
-          <div class="leaderboard-empty">No hazards reported nearby yet.</div>
-        </div>
-      </section>
-
       <section class="portfolio-panel" aria-labelledby="portfolio-title">
         <div class="panel-heading-row">
           <div>
@@ -289,6 +293,7 @@
           <div class="leaderboard-empty">No reports yet — click the map to report a hazard.</div>
         </div>
       </section>
+      </div>
     </div>
 
     <!-- ============ REPORT PANEL (report-a-hazard form) ============ -->
